@@ -1,15 +1,25 @@
 import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
-  // Permite servir arquivos HTML estáticos da pasta public
   async headers() {
     return [
       {
         source: '/ppci-app.html',
         headers: [
-          { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
           { key: 'Content-Type', value: 'text/html; charset=utf-8' },
         ],
+      },
+    ]
+  },
+  async rewrites() {
+    return [
+      {
+        source: '/api/ai/status',
+        destination: '/api/ai-status',
+      },
+      {
+        source: '/api/ai/analyze-plant',
+        destination: '/api/analyze-plant',
       },
     ]
   },
