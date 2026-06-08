@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>PPCI SaaS — Dimensionamento de Projetos PPCI (CBMBA)</title>
+<title>PPCI PRO — Dimensionamento de Projetos PPCI (CBMBA)</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
@@ -32,7 +32,7 @@
 const {useState, useEffect, useMemo, useCallback, createContext, useContext} = React;
 
 /* ================================================================
-   PPCI SaaS — Aplicação Completa
+   PPCI PRO — Aplicação Completa
    Prevenção e Proteção Contra Incêndio (CBMBA)
    ================================================================ */
 
@@ -574,6 +574,8 @@ const SN={
   VENTILACAO_MECANICA:"Pressurização de escada (IT-13)",
   RESFRIAMENTO:"Resfriamento (NBR 17505)",
 };
+// Nome amigável de pavimento para tabelas de cálculo
+const pavNomesCalc=(i,total)=>{const nomes=["Térreo","1º Pavimento","2º Pavimento","3º Pavimento","4º Pavimento","5º Pavimento","6º Pavimento","7º Pavimento","8º Pavimento","9º Pavimento","10º Pavimento"];return nomes[i]||`${i}º Pavimento`;};
 
 // ---- SAMPLE ----
 const SAMPLES=[
@@ -613,7 +615,7 @@ const StatCard=({IconC,label,value,sub,color="orange"})=>{
 const CalcStep=({n,title,formula,result,unit,obs})=>(<div className="flex gap-4 py-3 border-b border-slate-100 last:border-0"><div className="w-7 h-7 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">{n}</div><div className="flex-1 min-w-0"><p className="font-semibold text-slate-800 text-sm">{title}</p><p className="text-xs text-slate-500 mt-0.5 font-mono bg-slate-50 rounded px-2 py-1 inline-block">{formula}</p><p className="text-sm mt-1"><span className="font-bold text-orange-600">{result}</span>{unit&&<span className="text-slate-500 ml-1">{unit}</span>}</p>{obs&&<p className="text-xs text-slate-400 mt-0.5 italic">{obs}</p>}</div></div>);
 
 // ---- SIDEBAR ----
-const Sidebar=({page,setPage,collapsed,setCollapsed,selProj})=>{
+const Sidebar=({page,setPage,collapsed,setCollapsed,selProj,profile})=>{
   // Calcula sistemas exigidos para o projeto selecionado
   const sistemasProjeto=useMemo(()=>{
     if(!selProj)return null;
@@ -668,19 +670,20 @@ const Sidebar=({page,setPage,collapsed,setCollapsed,selProj})=>{
     {id:"calculos",label:"Cálculos Gerais",Ic:Icons.calculator,grupo:"out"},
     {id:"revisao",label:"Revisão",Ic:Icons.eye,grupo:"out"},
     {id:"exportar",label:"Exportar",Ic:Icons.download,grupo:"out"},
-    {id:"planos",label:"Planos & Upgrade",Ic:Icons.zap,grupo:"out"},
   ];
   return(<aside className={`fixed left-0 top-0 h-full bg-slate-900 text-white z-40 transition-all duration-300 flex flex-col ${collapsed?"w-[68px]":"w-64"}`}>
-    <div className="flex items-center gap-3 px-4 h-16 border-b border-slate-700/50"><div className="w-9 h-9 rounded-lg bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center flex-shrink-0 shadow-lg shadow-orange-500/20"><Icons.flame size={18}/></div>{!collapsed&&<div><p className="font-bold text-sm tracking-wide">PPCI SaaS</p><p className="text-[10px] text-slate-400 tracking-wider">CBMBA</p></div>}</div>
+    <div className="flex items-center gap-3 px-4 h-16 border-b border-slate-700/50"><div className="w-9 h-9 rounded-lg bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center flex-shrink-0 shadow-lg shadow-orange-500/20"><Icons.flame size={18}/></div>{!collapsed&&<div><p className="font-bold text-sm tracking-wide">PPCI PRO</p><p className="text-[10px] text-slate-400 tracking-wider">CBMBA</p></div>}</div>
     {!collapsed&&selProj&&<div className="px-3 py-2 bg-slate-800/60 border-b border-slate-700/30"><p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Projeto ativo</p><p className="text-[11px] text-orange-400 font-semibold truncate mt-0.5">{selProj.nome}</p><p className="text-[9px] text-slate-500">{selProj.divisao} • {(() => {const area=Number(selProj.area_construida)||0,alt=Number(selProj.altura_edificacao)||0,pav=Number(selProj.numero_pavimentos)||1,cg=Number(selProj.carga_incendio)||(CARGA[selProj.divisao]||300),pop=Number(selProj.populacao)||(Math.ceil(area*(POP_M2[selProj.divisao]||.1)));const ri=risco(cg);const proc=definirProcesso(area,alt,pav,selProj.grupo,selProj.divisao,pop,ri.n,sistemasProjeto?.includes("HIDRANTES"));return proc.tipo==="PTS"?"PTS":"PT";})()}</p></div>}
-    <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto">{items.map((it,idx)=>{
+    <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto pb-40">{items.map((it,idx)=>{
       const prevGrupo=idx>0?items[idx-1].grupo:null;
       const showLabel=!collapsed&&it.grupo!==prevGrupo;
       const labels={main:"PROJETO",reg:"REGULARIZAÇÃO",dim:"DIMENSIONAMENTO",out:"FINALIZAÇÃO"};
       const locked=isLocked(it.id);
+      const planoAtual=(profile&&profile.plan)||"free";
+      const planLocked=planoAtual==="free"&&(it.grupo==="dim"||it.grupo==="out");
       return(<React.Fragment key={it.id}>
         {showLabel&&<p className="text-[9px] font-bold text-slate-600 uppercase tracking-wider px-3 pt-3 pb-1">{labels[it.grupo]}</p>}
-        <button onClick={()=>{if(!locked)setPage(it.id)}} title={locked?"Não exigido para este projeto":it.label} className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-200 group relative ${locked?"opacity-40 cursor-not-allowed":""} ${page===it.id&&!locked?"bg-gradient-to-r from-orange-500/20 to-red-500/10 text-orange-400 font-semibold":"text-slate-400 hover:text-white hover:bg-slate-800"} ${locked?"hover:bg-transparent hover:text-slate-400":""}`}><it.Ic size={17} className={`flex-shrink-0 ${page===it.id&&!locked?"text-orange-400":"text-slate-500 group-hover:text-slate-300"} ${locked?"group-hover:text-slate-500":""}`}/>{!collapsed&&<span className="text-[13px] flex-1">{it.label}</span>}{!collapsed&&locked&&<span className="text-[9px] text-slate-600 bg-slate-800 px-1.5 py-0.5 rounded font-semibold">N/A</span>}</button>
+        <button onClick={()=>{if(!locked)setPage(it.id)}} title={locked?"Não exigido para este projeto":planLocked?"Recurso do plano Profissional":it.label} className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-200 group relative ${locked?"opacity-40 cursor-not-allowed":""} ${page===it.id&&!locked?"bg-gradient-to-r from-orange-500/20 to-red-500/10 text-orange-400 font-semibold":"text-slate-400 hover:text-white hover:bg-slate-800"} ${locked?"hover:bg-transparent hover:text-slate-400":""}`}><it.Ic size={17} className={`flex-shrink-0 ${page===it.id&&!locked?"text-orange-400":"text-slate-500 group-hover:text-slate-300"} ${locked?"group-hover:text-slate-500":""}`}/>{!collapsed&&<span className="text-[13px] flex-1">{it.label}</span>}{!collapsed&&locked&&<span className="text-[9px] text-slate-600 bg-slate-800 px-1.5 py-0.5 rounded font-semibold">N/A</span>}{!collapsed&&!locked&&planLocked&&<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="text-orange-400/70 flex-shrink-0"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>}</button>
       </React.Fragment>);
     })}</nav>
     <div className="p-3 border-t border-slate-700/50"><button onClick={()=>setCollapsed(!collapsed)} className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs text-slate-500 hover:text-white hover:bg-slate-800 transition-colors">{collapsed?<Icons.chevronRight size={16}/>:<><span>← Recolher</span></>}</button></div>
@@ -688,52 +691,220 @@ const Sidebar=({page,setPage,collapsed,setCollapsed,selProj})=>{
 };
 
 // ---- DASHBOARD ----
-const DashboardPage=({projects,setPage,setSelProj,setProjects})=>(
-  <div className="space-y-8 fade-in">
-    <div><h1 className="text-2xl font-bold text-slate-800">Dashboard</h1><p className="text-slate-500 text-sm mt-1">Visão geral dos seus projetos PPCI</p></div>
-    {projects.length>=3&&(
-      <div className="p-4 bg-gradient-to-r from-orange-50 to-red-50 border border-orange-200 rounded-xl flex items-center justify-between gap-4 flex-wrap">
-        <div className="flex items-center gap-3"><Icons.zap size={20} className="text-orange-500 flex-shrink-0"/><div><p className="text-sm font-semibold text-slate-800">Você atingiu o limite do plano gratuito</p><p className="text-xs text-slate-500">Faça upgrade para criar projetos ilimitados e exportar PDFs profissionais.</p></div></div>
-        <Btn size="sm" onClick={()=>setPage("planos")} className="flex-shrink-0"><Icons.zap size={14}/> Ver planos</Btn>
+// Configuração dos status de gestão (manual)
+const STATUS_GESTAO={
+  rascunho:{label:"Rascunho",cls:"bg-slate-100 text-slate-600"},
+  em_andamento:{label:"Em andamento",cls:"bg-amber-100 text-amber-700"},
+  protocolado:{label:"Protocolado",cls:"bg-blue-100 text-blue-700"},
+  aprovado:{label:"Aprovado",cls:"bg-emerald-100 text-emerald-700"},
+  reprovado:{label:"Reprovado",cls:"bg-red-100 text-red-700"},
+};
+const fmtBRL=(v)=>"R$ "+(Number(v)||0).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
+
+// Modal de edição de projeto (corrige dados + gestão: valor, datas, status)
+const EditarProjetoModal=({projeto,onClose,onSalvar})=>{
+  const [f,setF]=useState({
+    nome:projeto.nome||"",
+    endereco:projeto.endereco||"",
+    grupo:projeto.grupo||"A",
+    divisao:projeto.divisao||"",
+    area_construida:projeto.area_construida||"",
+    numero_pavimentos:projeto.numero_pavimentos||1,
+    altura_edificacao:projeto.altura_edificacao||"",
+    valor:projeto.valor||0,
+    data_inicio:projeto.data_inicio||"",
+    data_aprovacao:projeto.data_aprovacao||"",
+    status_gestao:projeto.status_gestao||"rascunho",
+  });
+  const [salvando,setSalvando]=useState(false);
+  const set=(k,v)=>setF(p=>({...p,[k]:v}));
+  const salvar=async()=>{
+    if(salvando)return;setSalvando(true);
+    const pav=Number(f.numero_pavimentos)||1;
+    const alturaTotal=Number(f.altura_edificacao)||0;
+    const atualizado={
+      ...projeto,
+      nome:f.nome,endereco:f.endereco,grupo:f.grupo,divisao:f.divisao||(f.grupo+"-1"),
+      area_construida:Number(f.area_construida)||0,
+      numero_pavimentos:pav,
+      altura_edificacao:alturaTotal,
+      altura_unitaria:pav>0?alturaTotal/pav:alturaTotal,
+      valor:Number(f.valor)||0,
+      data_inicio:f.data_inicio||null,
+      data_aprovacao:f.data_aprovacao||null,
+      status_gestao:f.status_gestao,
+    };
+    await onSalvar(atualizado);
+    setSalvando(false);
+    onClose();
+  };
+  const inp="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400";
+  const lbl="text-xs font-semibold text-slate-600 mb-1 block";
+  return(
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e=>e.stopPropagation()}>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 sticky top-0 bg-white rounded-t-2xl">
+          <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2"><Icons.edit size={18} className="text-violet-500"/> Editar projeto</h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><Icons.x size={18}/></button>
+        </div>
+        <div className="p-6 space-y-4">
+          <div><label className={lbl}>Nome do cliente / projeto</label><input className={inp} value={f.nome} onChange={e=>set("nome",e.target.value)}/></div>
+          <div><label className={lbl}>Endereço</label><input className={inp} value={f.endereco} onChange={e=>set("endereco",e.target.value)}/></div>
+          <div className="grid grid-cols-2 gap-3">
+            <div><label className={lbl}>Grupo</label>
+              <select className={inp} value={f.grupo} onChange={e=>set("grupo",e.target.value)}>{Object.keys(GRUPOS).map(g=><option key={g} value={g}>{g} — {GRUPOS[g].nome}</option>)}</select>
+            </div>
+            <div><label className={lbl}>Divisão (ex: D-1)</label><input className={inp} value={f.divisao} onChange={e=>set("divisao",e.target.value)} placeholder={f.grupo+"-1"}/></div>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div><label className={lbl}>Área (m²)</label><input type="number" className={inp} value={f.area_construida} onChange={e=>set("area_construida",e.target.value)}/></div>
+            <div><label className={lbl}>Pavimentos</label><input type="number" className={inp} value={f.numero_pavimentos} onChange={e=>set("numero_pavimentos",e.target.value)}/></div>
+            <div><label className={lbl}>Altura (m)</label><input type="number" className={inp} value={f.altura_edificacao} onChange={e=>set("altura_edificacao",e.target.value)}/></div>
+          </div>
+          <div className="pt-2 border-t border-slate-100">
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Gestão</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div><label className={lbl}>Valor do projeto (R$)</label><input type="number" step="0.01" className={inp} value={f.valor} onChange={e=>set("valor",e.target.value)}/></div>
+              <div><label className={lbl}>Status</label>
+                <select className={inp} value={f.status_gestao} onChange={e=>set("status_gestao",e.target.value)}>{Object.entries(STATUS_GESTAO).map(([k,c])=><option key={k} value={k}>{c.label}</option>)}</select>
+              </div>
+              <div><label className={lbl}>Data de início</label><input type="date" className={inp} value={f.data_inicio||""} onChange={e=>set("data_inicio",e.target.value)}/></div>
+              <div><label className={lbl}>Data de aprovação</label><input type="date" className={inp} value={f.data_aprovacao||""} onChange={e=>set("data_aprovacao",e.target.value)}/></div>
+            </div>
+          </div>
+        </div>
+        <div className="flex justify-end gap-3 px-6 py-4 border-t border-slate-200 sticky bottom-0 bg-white rounded-b-2xl">
+          <Btn variant="secondary" onClick={onClose}>Cancelar</Btn>
+          <Btn variant="success" onClick={salvar} disabled={salvando}><Icons.check size={14}/> {salvando?"Salvando...":"Salvar alterações"}</Btn>
+        </div>
       </div>
-    )}
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      <StatCard IconC={Icons.building} label="Total de Projetos" value={projects.length} sub="projetos cadastrados" color="blue"/>
-      <StatCard IconC={Icons.calculator} label="Calculados" value={projects.filter(p=>p.status==="CALCULADO").length} sub="prontos para exportar" color="green"/>
-      <StatCard IconC={Icons.clock} label="Em Andamento" value={projects.filter(p=>["RASCUNHO","EM_ANALISE"].includes(p.status)).length} color="orange"/>
-      <StatCard IconC={Icons.shield} label="Aprovados" value={projects.filter(p=>p.status==="APROVADO").length} color="purple"/>
     </div>
+  );
+};
+
+// Gráfico de linha simples em SVG (sem dependências)
+const LineChartSVG=({dados,cor="#ef4444",prefixo=""})=>{
+  const W=520,H=160,pad=34;
+  const vals=dados.map(d=>d.v);
+  const max=Math.max(1,...vals);
+  const stepX=dados.length>1?(W-pad*2)/(dados.length-1):0;
+  const y=(v)=>H-pad-(v/max)*(H-pad*2);
+  const pts=dados.map((d,i)=>[pad+i*stepX,y(d.v)]);
+  const linha=pts.map((p,i)=>(i===0?"M":"L")+p[0].toFixed(1)+" "+p[1].toFixed(1)).join(" ");
+  const area=linha+` L ${(pad+(dados.length-1)*stepX).toFixed(1)} ${H-pad} L ${pad} ${H-pad} Z`;
+  const gid="g"+cor.replace("#","");
+  return(
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{maxHeight:180}}>
+      <defs><linearGradient id={gid} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={cor} stopOpacity="0.18"/><stop offset="1" stopColor={cor} stopOpacity="0"/></linearGradient></defs>
+      {[0,0.5,1].map((f,i)=>(<line key={i} x1={pad} x2={W-pad} y1={pad+f*(H-pad*2)} y2={pad+f*(H-pad*2)} stroke="#e2e8f0" strokeWidth="1"/>))}
+      <path d={area} fill={`url(#${gid})`}/>
+      <path d={linha} fill="none" stroke={cor} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round"/>
+      {pts.map((p,i)=>(<circle key={i} cx={p[0]} cy={p[1]} r="3.5" fill={cor}/>))}
+      {dados.map((d,i)=>(<text key={i} x={pad+i*stepX} y={H-10} fontSize="9" fill="#94a3b8" textAnchor="middle">{d.label}</text>))}
+    </svg>
+  );
+};
+
+// Monta série dos últimos 6 meses
+const serieMeses=(projects,campo)=>{
+  const meses=["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+  const hoje=new Date();
+  const serie=[];
+  for(let k=5;k>=0;k--){
+    const d=new Date(hoje.getFullYear(),hoje.getMonth()-k,1);
+    const chave=d.getFullYear()+"-"+(d.getMonth());
+    let v=0;
+    projects.forEach(p=>{
+      const ref=campo==="faturamento"?(p.data_aprovacao||p.data_inicio||p.criado):(p.data_inicio||p.criado);
+      if(!ref)return;
+      const rd=new Date(ref);
+      if(rd.getFullYear()===d.getFullYear()&&rd.getMonth()===d.getMonth()){
+        v+=campo==="faturamento"?(Number(p.valor)||0):1;
+      }
+    });
+    serie.push({label:meses[d.getMonth()],v});
+  }
+  return serie;
+};
+
+const DashboardPage=({projects,setPage,setSelProj,setProjects,excluirProjeto,editarProjeto})=>{
+  const faturamentoTotal=projects.reduce((s,p)=>s+(Number(p.valor)||0),0);
+  const aprovadosFat=projects.filter(p=>p.status_gestao==="aprovado").reduce((s,p)=>s+(Number(p.valor)||0),0);
+  const serieProjetos=serieMeses(projects,"projetos");
+  const serieFat=serieMeses(projects,"faturamento");
+  const recentes=[...projects].sort((a,b)=>new Date(b.atualizado||b.criado||0)-new Date(a.atualizado||a.criado||0)).slice(0,5);
+  return(
+  <div className="space-y-8 fade-in">
+    <div><h1 className="text-2xl font-bold text-slate-800">Dashboard</h1><p className="text-slate-500 text-sm mt-1">Visão geral e gestão dos seus projetos PPCI</p></div>
+
+    {/* Cards de topo: Projetos + Faturamento com mini-gráficos */}
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <Card className="p-5">
+        <div className="flex items-start justify-between mb-2">
+          <div><p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Projetos</p><p className="text-3xl font-bold text-slate-800 mt-1">{projects.length}</p></div>
+          <Btn variant="primary" size="sm" onClick={()=>setPage("novo-projeto")}><Icons.plus size={14}/> Novo projeto</Btn>
+        </div>
+        <LineChartSVG dados={serieProjetos} cor="#ef4444"/>
+      </Card>
+      <Card className="p-5">
+        <div className="flex items-start justify-between mb-2">
+          <div><p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Faturamento</p><p className="text-3xl font-bold text-slate-800 mt-1">{fmtBRL(faturamentoTotal)}</p><p className="text-[11px] text-emerald-600 mt-0.5">{fmtBRL(aprovadosFat)} em projetos aprovados</p></div>
+        </div>
+        <LineChartSVG dados={serieFat} cor="#10b981"/>
+      </Card>
+    </div>
+
+    {/* Indicadores rápidos por status */}
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+      {Object.entries(STATUS_GESTAO).map(([k,cfg])=>(
+        <div key={k} className="p-3 rounded-xl border border-slate-200 bg-white text-center">
+          <p className="text-2xl font-bold text-slate-800">{projects.filter(p=>(p.status_gestao||"rascunho")===k).length}</p>
+          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${cfg.cls}`}>{cfg.label}</span>
+        </div>
+      ))}
+    </div>
+
+    {/* Tabela de projetos recentes */}
     <div>
-      <div className="flex items-center justify-between mb-4"><h2 className="text-lg font-bold text-slate-800">Projetos Recentes</h2><Btn variant="primary" size="sm" onClick={()=>setPage("novo-projeto")}><Icons.plus size={14}/> Novo Projeto</Btn></div>
+      <div className="flex items-center justify-between mb-4"><div><h2 className="text-lg font-bold text-slate-800">Projetos recentes</h2><p className="text-xs text-slate-500">Os {recentes.length} projetos mais recentes</p></div></div>
       <Card>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm"><thead><tr className="border-b border-slate-200">{["Projeto","Ocupação","Área","Altura","Status",""].map(h=><th key={h} className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-5 py-3">{h}</th>)}</tr></thead>
-          <tbody>{projects.map((p,i)=>(<tr key={p.id} className={`border-b border-slate-100 hover:bg-slate-50/50 transition-colors ${i%2===0?"":"bg-slate-50/30"}`}>
+          <table className="w-full text-sm"><thead><tr className="border-b border-slate-200">{["Cliente / Projeto","Tipo","Valor","Ocupação","Início","Aprovação","Status",""].map(h=><th key={h} className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider px-5 py-3">{h}</th>)}</tr></thead>
+          <tbody>{recentes.length===0&&(<tr><td colSpan={8} className="px-5 py-8 text-center text-slate-400 text-sm">Nenhum projeto ainda. Clique em "Novo projeto" para começar.</td></tr>)}
+          {recentes.map((p,i)=>{const sc=STATUS_GESTAO[p.status_gestao||"rascunho"]||STATUS_GESTAO.rascunho;return(<tr key={p.id} className={`border-b border-slate-100 hover:bg-slate-50/50 transition-colors ${i%2===0?"":"bg-slate-50/30"}`}>
             <td className="px-5 py-3.5 font-semibold text-slate-800">{p.nome}</td>
-            <td className="px-5 py-3.5 text-slate-600">{p.divisao} — {GRUPOS[p.grupo]?.nome}</td>
-            <td className="px-5 py-3.5 text-slate-600">{p.area_construida?.toLocaleString()} m²</td>
-            <td className="px-5 py-3.5 text-slate-600">{p.altura_edificacao} m</td>
-            <td className="px-5 py-3.5"><Badge variant={p.status}>{p.status.replace("_"," ")}</Badge></td>
+            <td className="px-5 py-3.5 text-slate-600">{(()=>{
+              if(!p.divisao&&!p.grupo)return "—";
+              try{
+                const proc=definirProcesso(Number(p.area_construida)||0,Number(p.altura_edificacao)||0,Number(p.numero_pavimentos)||1,p.grupo,p.divisao,Number(p.populacao)||0,p.risco_nivel,!!p.exige_hidrante);
+                return proc.tipo==="PTS"?"PTS":"Projeto Técnico";
+              }catch(e){return "—";}
+            })()}</td>
+            <td className="px-5 py-3.5 text-slate-700 font-medium">{fmtBRL(p.valor)}</td>
+            <td className="px-5 py-3.5 text-slate-600">{GRUPOS[p.grupo]?.nome||p.divisao}</td>
+            <td className="px-5 py-3.5 text-slate-600">{p.data_inicio?new Date(p.data_inicio).toLocaleDateString("pt-BR"):"—"}</td>
+            <td className="px-5 py-3.5 text-slate-600">{p.data_aprovacao?new Date(p.data_aprovacao).toLocaleDateString("pt-BR"):"—"}</td>
+            <td className="px-5 py-3.5"><span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${sc.cls}`}>{sc.label}</span></td>
             <td className="px-5 py-3.5"><div className="flex gap-1">
+              <button onClick={()=>editarProjeto(p)} className="p-1.5 rounded-lg hover:bg-violet-50 text-slate-400 hover:text-violet-500 transition-colors" title="Editar projeto"><Icons.edit size={15}/></button>
               <button onClick={()=>{setSelProj(p);setPage("calculos")}} className="p-1.5 rounded-lg hover:bg-orange-50 text-slate-400 hover:text-orange-500 transition-colors" title="Calcular"><Icons.calculator size={15}/></button>
               <button onClick={()=>{setSelProj(p);setPage("revisao")}} className="p-1.5 rounded-lg hover:bg-blue-50 text-slate-400 hover:text-blue-500 transition-colors" title="Revisar"><Icons.eye size={15}/></button>
-              <button onClick={async()=>{if(window.confirm(`Deseja realmente excluir o projeto "${p.nome}"?\n\nEsta ação não pode ser desfeita.`)){await supabase.from("projects").delete().eq("id",p.id);setProjects(prev=>prev.filter(x=>x.id!==p.id))}}} className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors" title="Excluir"><Icons.trash size={15}/></button>
+              <button onClick={()=>{if(window.confirm(`Deseja realmente excluir o projeto "${p.nome}"?\n\nEsta ação não pode ser desfeita.`)){excluirProjeto(p.id)}}} className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors" title="Excluir"><Icons.trash size={15}/></button>
             </div></td>
-          </tr>))}</tbody></table>
+          </tr>)})}</tbody></table>
         </div>
       </Card>
     </div>
   </div>
-);
+  );
+};
 
 // ---- NOVO PROJETO ----
-const NovoProjetoPage=({setPage,setProjects,projects,setSelProj})=>{
+const NovoProjetoPage=({setPage,setProjects,projects,setSelProj,salvarProjeto,profile})=>{
   const [step,setStep]=useState(0);
   const [f,setF]=useState({nome:"",endereco:"",area_construida:"",area_terreno:"",numero_pavimentos:"1",altura_edificacao:"",grupo:"",divisao:"",populacao:"",carga_incendio:"",possui_subsolo:false,numero_subsolos:"0",responsavel_tecnico:"",crea_responsavel:"",areas_por_pavimento:[]});
   const [pavNomes]=useState(["Térreo","1º Pavimento","2º Pavimento","3º Pavimento","4º Pavimento","5º Pavimento","6º Pavimento","7º Pavimento","8º Pavimento","9º Pavimento","10º Pavimento","11º Pavimento","12º Pavimento","13º Pavimento","14º Pavimento","15º Pavimento","16º Pavimento","17º Pavimento","18º Pavimento","19º Pavimento","20º Pavimento"]);
   const [err,setErr]=useState({});
-  const [saving,setSaving]=useState(false);
-  const [saveErr,setSaveErr]=useState("");
   const set=(k,v)=>{setF(p=>({...p,[k]:v}));setErr(p=>{const n={...p};delete n[k];return n})};
   const grupoD=GRUPOS[f.grupo];
   const divOpts=grupoD?Object.entries(grupoD.divisoes).map(([k,v])=>({value:k,label:`${k} — ${v}`})):[];
@@ -742,60 +913,61 @@ const NovoProjetoPage=({setPage,setProjects,projects,setSelProj})=>{
   const validate=s=>{const e={};if(s===0){if(!f.nome)e.nome="Obrigatório";if(!f.area_construida||f.area_construida<=0)e.area_construida="Informe a área";if(!f.numero_pavimentos)e.numero_pavimentos="Obrigatório"}if(s===1){if(!f.grupo)e.grupo="Selecione";if(!f.divisao)e.divisao="Selecione"}setErr(e);return!Object.keys(e).length};
   const next=()=>{if(validate(step))setStep(s=>Math.min(s+1,2))};
   const prev=()=>setStep(s=>Math.max(s-1,0));
+  const [salvando,setSalvando]=useState(false);
   const criar=async()=>{
-    setSaveErr("");setSaving(true);
-    try{
-      const {data:{user}}=await supabase.auth.getUser();
-      if(!user)throw new Error("Sessão expirada. Faça login novamente.");
-      // Verificar limite do plano free
-      const{data:prof}=await supabase.from("profiles").select("plan").eq("id",user.id).single();
-      const plano=prof?.plan||"free";
-      if(plano==="free"){
-        const{count}=await supabase.from("projects").select("*",{count:"exact",head:true}).eq("user_id",user.id);
-        if((count||0)>=3)throw new Error("Limite do plano gratuito: 3 projetos. Faça upgrade para o Plano Pro para criar projetos ilimitados.");
-      }
-      const payload={
-        user_id:user.id,
-        nome:f.nome,
-        endereco:f.endereco||null,
-        divisao:f.divisao,
-        area:Number(f.area_construida),
-        pavimentos:Number(f.numero_pavimentos)||1,
-        altura:Number(f.altura_edificacao)||3,
-        subterraneo:f.possui_subsolo,
-        populacao:Number(f.populacao)||calcPop||null,
-        carga_incendio:Number(f.carga_incendio)||calcCarga||null,
-        status:"em_andamento",
-        calculos:{
-          areas_por_pavimento:f.areas_por_pavimento,
-          area_terreno:f.area_terreno||null,
-          numero_subsolos:Number(f.numero_subsolos)||0,
-          responsavel_tecnico:f.responsavel_tecnico||null,
-          crea_responsavel:f.crea_responsavel||null,
-        }
-      };
-      const{data,error}=await supabase.from("projects").insert(payload).select().single();
-      if(error)throw error;
-      // Normaliza para o formato usado no app
-      const novo={
-        ...data,
-        grupo:f.grupo,
-        status:"RASCUNHO",
-        area_construida:data.area,
-        altura_edificacao:data.altura*data.pavimentos,
-        numero_pavimentos:data.pavimentos,
-        possui_subsolo:data.subterraneo,
-        criado:data.created_at?.slice(0,10),
-        atualizado:data.updated_at?.slice(0,10),
-      };
-      setProjects(p=>[novo,...p]);
-      setSelProj(novo);
-      setPage("calculos");
-    }catch(e){
-      setSaveErr(e.message||"Erro ao salvar projeto. Tente novamente.");
-    }finally{setSaving(false);}
+    const plano=(profile&&profile.plan)||"free";
+    if(plano==="free"&&projects.length>=3){
+      alert("O plano Gratuito permite até 3 projetos. Para criar projetos ilimitados, assine o plano Profissional.");
+      window.open("https://pay.kiwify.com.br/BHLRqDV","_blank");
+      return;
+    }
+    if(salvando)return;
+    setSalvando(true);
+    const alturaTotal=Number(f.altura_edificacao)||0;
+    const pav=Number(f.numero_pavimentos)||1;
+    const n={
+      id:Date.now(),nome:f.nome,status:"RASCUNHO",grupo:f.grupo,divisao:f.divisao,
+      area_construida:Number(f.area_construida),altura_edificacao:alturaTotal,
+      altura_unitaria:pav>0?(alturaTotal/pav):alturaTotal,
+      numero_pavimentos:pav,endereco:f.endereco,
+      criado:new Date().toISOString().split("T")[0],atualizado:new Date().toISOString().split("T")[0],
+      possui_subsolo:f.possui_subsolo,populacao:Number(f.populacao)||calcPop,
+      carga_incendio:Number(f.carga_incendio)||calcCarga,numero_subsolos:Number(f.numero_subsolos)||0,
+      responsavel_tecnico:f.responsavel_tecnico,crea_responsavel:f.crea_responsavel,
+      areas_por_pavimento:f.areas_por_pavimento
+    };
+    const salvo=await salvarProjeto(n);
+    setSalvando(false);
+    setSelProj(salvo);
+    setPage("calculos");
   };
   const steps=["Dados da Edificação","Classificação","Revisão & Criar"];
+  const plano=(profile&&profile.plan)||"free";
+  const limiteAtingido=plano==="free"&&projects.length>=3;
+  if(limiteAtingido){
+    return(
+      <div className="max-w-2xl mx-auto fade-in">
+        <Card className="p-8 sm:p-12 text-center">
+          <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center shadow-lg shadow-orange-500/30 mb-6"><Icons.shield size={30} className="text-white"/></div>
+          <h1 className="text-2xl font-bold text-slate-800">Limite do plano Gratuito atingido</h1>
+          <p className="text-slate-500 mt-3 leading-relaxed">O plano Gratuito permite até <b>3 projetos</b>, e você já tem {projects.length}. Para criar novos projetos sem limite, assine o plano <b>Profissional</b>.</p>
+          <div className="mt-7 p-5 bg-orange-50/60 rounded-xl border border-orange-200 text-left max-w-md mx-auto">
+            <p className="text-xs font-semibold text-orange-600 uppercase tracking-wider mb-3">Com o plano Profissional você tem</p>
+            <ul className="space-y-2 text-sm text-slate-600">
+              <li className="flex items-center gap-2"><Icons.check size={15} className="text-emerald-500 flex-shrink-0"/> Projetos ilimitados</li>
+              <li className="flex items-center gap-2"><Icons.check size={15} className="text-emerald-500 flex-shrink-0"/> Análise de planta com IA</li>
+              <li className="flex items-center gap-2"><Icons.check size={15} className="text-emerald-500 flex-shrink-0"/> Memorial com seu CREA e exportação em PDF</li>
+            </ul>
+          </div>
+          <p className="text-xs text-slate-400 mt-5">Importante: assine usando o <b>mesmo e-mail</b> com que você entra no app, para o plano ser liberado automaticamente.</p>
+          <div className="flex justify-center gap-3 mt-7">
+            <Btn variant="secondary" onClick={()=>setPage("dashboard")}><Icons.arrowLeft size={14}/> Voltar</Btn>
+            <a href="https://pay.kiwify.com.br/BHLRqDV" target="_blank" rel="noopener" className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-gradient-to-r from-orange-500 to-red-500 text-white font-semibold shadow-lg shadow-orange-500/20 hover:opacity-90 transition-opacity no-underline"><Icons.shield size={14}/> Assinar plano Profissional</a>
+          </div>
+        </Card>
+      </div>
+    );
+  }
   return(
     <div className="max-w-3xl mx-auto space-y-8 fade-in">
       <div><h1 className="text-2xl font-bold text-slate-800">Novo Projeto PPCI</h1><p className="text-slate-500 text-sm mt-1">Preencha os dados para classificação automática</p></div>
@@ -834,20 +1006,33 @@ const NovoProjetoPage=({setPage,setProjects,projects,setSelProj})=>{
           </div>
           {f.divisao&&(()=>{const r=risco(Number(f.carga_incendio)||calcCarga);const sis=sistemas(Number(f.area_construida),Number(f.altura_edificacao)||0,f.grupo,f.divisao,r.n,f.possui_subsolo,Number(f.populacao)||calcPop,Number(f.numero_pavimentos)||1);return(<div className="mt-4 p-4 bg-orange-50/50 rounded-xl border border-orange-200"><p className="text-xs font-semibold text-orange-600 uppercase tracking-wider mb-2">Sistemas Exigidos ({sis.length})</p><div className="flex flex-wrap gap-2">{sis.map(s=><Badge key={s}>{SN[s]||s}</Badge>)}</div></div>)})()}
         </div>)}
-        {saveErr&&<div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{saveErr}</div>}
-        <div className="flex justify-between mt-8 pt-5 border-t border-slate-200">{step>0?<Btn variant="secondary" onClick={prev} disabled={saving}><Icons.arrowLeft size={14}/> Anterior</Btn>:<div/>}{step<2?<Btn onClick={next}>Próximo <Icons.arrowRight size={14}/></Btn>:<Btn variant="success" onClick={criar} disabled={saving}>{saving?<><span className="pulse-dot inline-block w-2 h-2 rounded-full bg-white mr-2"/>Salvando...</>:<><Icons.check size={14}/> Criar e Calcular</>}</Btn>}</div>
+        <div className="flex justify-between mt-8 pt-5 border-t border-slate-200">{step>0?<Btn variant="secondary" onClick={prev}><Icons.arrowLeft size={14}/> Anterior</Btn>:<div/>}{step<2?<Btn onClick={next}>Próximo <Icons.arrowRight size={14}/></Btn>:<Btn variant="success" onClick={criar} disabled={salvando}><Icons.check size={14}/> {salvando?"Salvando...":"Criar e Calcular"}</Btn>}</div>
       </Card>
     </div>
   );
 };
 
 // ---- CÁLCULOS ----
-const CalculosPage=({project:p})=>{
+const CalculosPage=({project:p,plano})=>{
   const [tab,setTab]=useState("classificacao");
   if(!p)return <div className="flex flex-col items-center justify-center h-96 text-slate-400"><Icons.calculator size={48} className="mb-4 opacity-50"/><p className="text-lg font-medium">Selecione um projeto para calcular</p><p className="text-sm mt-1">Vá ao Dashboard ou crie um novo projeto</p></div>;
   const area=Number(p.area_construida)||0,alt=Number(p.altura_edificacao)||0,pav=Number(p.numero_pavimentos)||1;
   const cg=Number(p.carga_incendio)||(CARGA[p.divisao]||300),pop=Number(p.populacao)||(Math.ceil(area*(POP_M2[p.divisao]||.1)));
   const ri=risco(cg),sis=sistemas(area,alt,p.grupo,p.divisao,ri.n,p.possui_subsolo,pop,pav),areaPav=area/Math.max(pav,1),temH=sis.includes("HIDRANTES");
+
+  // ÁREAS REAIS POR PAVIMENTO: usa a lista informada; preenche os vazios com a média do restante.
+  const areasPav=(()=>{
+    const lista=Array.isArray(p.areas_por_pavimento)?p.areas_por_pavimento:[];
+    const arr=[];
+    let somaInf=0,nInf=0;
+    for(let i=0;i<pav;i++){const v=Number(lista[i]);if(v>0){arr[i]=v;somaInf+=v;nInf++;}else{arr[i]=null;}}
+    const restante=Math.max(0,area-somaInf);
+    const nVazios=pav-nInf;
+    const media=nVazios>0?(restante>0?restante/nVazios:(area/Math.max(pav,1))):0;
+    for(let i=0;i<pav;i++){if(arr[i]==null)arr[i]=media;}
+    return arr;
+  })();
+  const temAreasReais=Array.isArray(p.areas_por_pavimento)&&p.areas_por_pavimento.some(v=>Number(v)>0);
 
   // -------- EXTINTORES (IT-21/2017) --------
   // Tabela 1: capacidade extintora mínima e distância máxima de caminhamento
@@ -861,8 +1046,10 @@ const CalculosPage=({project:p})=>{
   const ext21=IT21_TAB1[ri.n];
   // Item 5.2.1.4: mínimo 2 unidades extintoras por pavimento (1 classe A + 1 classe BC)
   // Item 5.2.1.5: áreas < 50 m² admitem 1 unidade só (de pó ABC)
-  const qExtMinPav=areaPav<50?1:2;
-  const qExtT=qExtMinPav*pav;
+  // Calcula POR PAVIMENTO (área real de cada um) e soma — não divide o total igualmente.
+  const extPorPav=areasPav.map(a=>a<50?1:2);
+  const qExtT=extPorPav.reduce((s,n)=>s+n,0);
+  const qExtMinPav=extPorPav.length?Math.max(...extPorPav):2;
 
   // -------- SAÍDAS DE EMERGÊNCIA (IT-11/2016 Anexo A Tabela 1) --------
   // Capacidade da UP em pessoas: [acessos, escadas/rampas, portas]
@@ -917,11 +1104,27 @@ const CalculosPage=({project:p})=>{
   const cvs=[.5,.75,1,1.5,2,3,5,7.5,10,15,20,25,30,40,50,60,75,100],pCom=cvs.find(c=>c>=pM)||Math.ceil(pM);
 
   const tabs=[{id:"classificacao",label:"Classificação",Ic:Icons.shield},{id:"saida",label:"Saída Emergência",Ic:Icons.arrowRight},{id:"extintores",label:"Extintores",Ic:Icons.flame},...(temH?[{id:"hidrantes",label:"Hidrantes",Ic:Icons.droplets},{id:"reserva",label:"Reserva Técnica",Ic:Icons.database},{id:"bomba",label:"Bomba",Ic:Icons.gauge}]:[])];
+  const ehFree=(plano||"free")==="free";
+  const ABAS_FREE=["classificacao","saida","extintores"];
+  const abaLiberada=(id)=>!ehFree||ABAS_FREE.includes(id); // grátis: Classificação, Saída e Extintores
+  const cadeadoSVG=<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>;
+  const abaBloqueada=!abaLiberada(tab);
 
   return(
     <div className="space-y-6 fade-in">
       <div><h1 className="text-2xl font-bold text-slate-800">{p.nome}</h1><p className="text-slate-500 text-sm mt-1">Dimensionamento completo — ITs CBMBA</p></div>
-      <div className="flex gap-1 overflow-x-auto pb-1">{tabs.map(t=>(<button key={t.id} onClick={()=>setTab(t.id)} className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${tab===t.id?"bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-sm":"bg-slate-100 text-slate-600 hover:bg-slate-200"}`}><t.Ic size={14}/>{t.label}</button>))}</div>
+      <div className="flex gap-1 overflow-x-auto pb-1">{tabs.map(t=>{const lock=!abaLiberada(t.id);return(<button key={t.id} onClick={()=>setTab(t.id)} title={lock?"Recurso do plano Profissional":t.label} className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${tab===t.id?"bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-sm":"bg-slate-100 text-slate-600 hover:bg-slate-200"}`}><t.Ic size={14}/>{t.label}{lock&&<span className={tab===t.id?"text-white":"text-orange-400"}>{cadeadoSVG}</span>}</button>)})}</div>
+      {abaBloqueada?(
+        <Card className="p-8 sm:p-12 text-center">
+          <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center shadow-lg shadow-orange-500/30 mb-6"><Icons.calculator size={28} className="text-white"/></div>
+          <h2 className="text-xl font-bold text-slate-800">Cálculo detalhado — plano Profissional</h2>
+          <p className="text-slate-500 mt-3 leading-relaxed max-w-md mx-auto">No plano Gratuito você vê a <b>classificação</b> da edificação e os <b>sistemas exigidos</b>. O <b>dimensionamento detalhado</b> de cada sistema faz parte do plano Profissional.</p>
+          <div className="flex justify-center gap-3 mt-7">
+            <Btn variant="secondary" onClick={()=>setTab("classificacao")}><Icons.arrowLeft size={14}/> Ver classificação</Btn>
+            <a href="https://pay.kiwify.com.br/BHLRqDV" target="_blank" rel="noopener" className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-gradient-to-r from-orange-500 to-red-500 text-white font-semibold shadow-lg shadow-orange-500/20 hover:opacity-90 transition-opacity no-underline"><Icons.shield size={14}/> Assinar plano Profissional</a>
+          </div>
+        </Card>
+      ):(
       <Card className="p-6">
         {tab==="classificacao"&&(<div className="space-y-6">
           <h2 className="text-lg font-bold text-slate-800">Classificação da Edificação</h2><p className="text-xs text-slate-400 font-medium uppercase tracking-wider">Norma: IT-01 CBMBA</p>
@@ -944,8 +1147,13 @@ const CalculosPage=({project:p})=>{
           <CalcStep n={1} title="Classe de risco (IT-21 Tabela 1)" formula={`Carga ${cg} MJ/m² → ${ri.d}`} result={ri.n}/>
           <CalcStep n={2} title="Capacidade extintora mínima" formula="IT-21/2017 Tabela 1" result={ext21.cap} obs="Por unidade extintora portátil"/>
           <CalcStep n={3} title="Distância máxima de caminhamento" formula="IT-21/2017 Tabela 1" result={ext21.dMax} unit="m" obs="A partir de qualquer ponto da edificação"/>
-          <CalcStep n={4} title="Mínimo por pavimento (item 5.2.1.4 / 5.2.1.5)" formula={areaPav<50?`Área ${areaPav.toFixed(0)} m² < 50 m² → 1 unidade de pó ABC`:"Mínimo 2 unidades (1 classe A + 1 classe BC, ou 2 ABC)"} result={qExtMinPav} unit="unid./pav"/>
-          <CalcStep n={5} title="Quantidade mínima total" formula={`${qExtMinPav} × ${pav} pavimento(s)`} result={qExtT} unit="extintores"/>
+          <CalcStep n={4} title="Mínimo por pavimento (item 5.2.1.4 / 5.2.1.5)" formula={temAreasReais?"Calculado pela área real de cada pavimento (≥50 m² = 2 unid.; <50 m² = 1 unid.)":`Área média ${areaPav.toFixed(0)} m²/pav → ${qExtMinPav} unid.`} result={qExtMinPav} unit="unid./pav (máx)"/>
+          <div className="overflow-x-auto"><table className="w-full text-sm border border-slate-200 rounded-lg overflow-hidden">
+            <thead><tr className="bg-slate-50">{["Pavimento","Área (m²)","Mín. extintores"].map(h=><th key={h} className="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider px-3 py-2">{h}</th>)}</tr></thead>
+            <tbody>{areasPav.map((a,i)=>(<tr key={i} className="border-t border-slate-100"><td className="px-3 py-2 text-slate-700">{pavNomesCalc(i,pav)}</td><td className="px-3 py-2 text-slate-600">{a.toFixed(0)}{!temAreasReais&&<span className="text-[10px] text-slate-400"> (média)</span>}</td><td className="px-3 py-2 font-semibold text-slate-800">{extPorPav[i]}</td></tr>))}</tbody>
+            <tfoot><tr className="bg-orange-50 border-t border-orange-200"><td className="px-3 py-2 font-bold text-slate-800">Total</td><td className="px-3 py-2 font-semibold text-slate-700">{area.toFixed(0)}</td><td className="px-3 py-2 font-bold text-orange-600">{qExtT} extintores</td></tr></tfoot>
+          </table></div>
+          <CalcStep n={5} title="Quantidade mínima total" formula={temAreasReais?`Soma do mínimo de cada pavimento (áreas reais)`:`${qExtMinPav} × ${pav} pavimento(s)`} result={qExtT} unit="extintores"/>
           <CalcStep n={6} title="Extintor próximo às entradas/escadas (item 5.2.1.12)" formula="Não mais de 5 m da entrada principal e das escadas em demais pavimentos" result="Obrigatório"/>
           <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
             <b>Observação técnica:</b> A IT-21/2017 NÃO traz tabela de área de cobertura por extintor. O critério normativo é distância máxima de caminhamento até o extintor mais próximo. A distribuição final deve ser detalhada em planta, respeitando os itens 5.2.1 (instalação) e 5.2.1.10 (locais de risco específico: casas de máquinas, transformadores, geradores etc).
@@ -978,6 +1186,7 @@ const CalculosPage=({project:p})=>{
           </div>
         </div>)}
       </Card>
+      )}
     </div>
   );
 };
@@ -1071,7 +1280,7 @@ const LoginPage=({onLogin})=>{
       <div className="relative bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl p-8 w-full max-w-md fade-in">
         <div className="flex items-center gap-3 mb-8 justify-center">
           <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center shadow-lg shadow-orange-500/30"><Icons.flame size={22} className="text-white"/></div>
-          <div><h1 className="text-xl font-bold text-slate-800 tracking-tight">PPCI SaaS</h1><p className="text-[10px] text-slate-400 uppercase tracking-[0.2em]">Corpo de Bombeiros — Bahia</p></div>
+          <div><h1 className="text-xl font-bold text-slate-800 tracking-tight">PPCI PRO</h1><p className="text-[10px] text-slate-400 uppercase tracking-[0.2em]">Corpo de Bombeiros — Bahia</p></div>
         </div>
         <h2 className="text-lg font-bold text-slate-800 text-center mb-6">{mode==="login"?"Entrar na sua conta":"Criar sua conta grátis"}</h2>
         {error&&<div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{error}</div>}
@@ -1144,7 +1353,7 @@ const OrigemDado=({tipo})=>{
   return <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium ${c.color}`}>{c.icon} {c.label}</span>;
 };
 
-const AnalisePlantaPage=({setPage,setProjects,setSelProj})=>{
+const AnalisePlantaPage=({setPage,setProjects,setSelProj,salvarProjeto,session,profile})=>{
   const [files,setFiles]=useState([]);
   const [analyzing,setAnalyzing]=useState(false);
   const [result,setResult]=useState(null);
@@ -1157,6 +1366,25 @@ const AnalisePlantaPage=({setPage,setProjects,setSelProj})=>{
   const [showSettings,setShowSettings]=useState(false);
   const [backendStatus,setBackendStatus]=useState(null);
   const [errorMsg,setErrorMsg]=useState("");
+  // Controle de uso mensal (plano grátis = 3 análises/mês; Pro = ilimitado)
+  const LIMITE_FREE_MES=3;
+  const plano=(profile&&profile.plan)||"free";
+  const ilimitado=plano==="pro"||plano==="escritorio";
+  const [usoMes,setUsoMes]=useState(null); // null = carregando
+  const carregarUsoMes=async()=>{
+    if(!session){setUsoMes(0);return;}
+    const inicioMes=new Date();inicioMes.setDate(1);inicioMes.setHours(0,0,0,0);
+    try{
+      const {count}=await supabase.from("plant_analyses")
+        .select("id",{count:"exact",head:true})
+        .eq("user_id",session.user.id)
+        .gte("created_at",inicioMes.toISOString());
+      setUsoMes(count||0);
+    }catch(e){setUsoMes(0);}
+  };
+  useEffect(()=>{carregarUsoMes();},[session]);
+  const limiteAtingido=!ilimitado&&usoMes!==null&&usoMes>=LIMITE_FREE_MES;
+  const restantes=ilimitado?null:Math.max(0,LIMITE_FREE_MES-(usoMes||0));
 
   const saveBackendUrl=(url)=>{
     setBackendUrl(url);
@@ -1184,11 +1412,20 @@ const AnalisePlantaPage=({setPage,setProjects,setSelProj})=>{
   };
   const handleDrop=(e)=>{e.preventDefault();const fs=Array.from(e.dataTransfer.files||[]);setFiles(prev=>[...prev,...fs.map(f=>({name:f.name,size:f.size,ext:(f.name.split(".").pop()||"").toLowerCase(),id:Date.now()+Math.random(),raw:f}))])};
   const removeFile=(id)=>setFiles(prev=>prev.filter(f=>f.id!==id));
+  const [memorialFile,setMemorialFile]=useState(null);
+  const handleMemorial=(e)=>{const f=(e.target.files||[])[0];if(f)setMemorialFile({name:f.name,size:f.size,ext:(f.name.split(".").pop()||"").toLowerCase(),raw:f})};
 
   // === ANÁLISE COM IA REAL (backend conectado) ===
-  const analyzeWithBackend=async(file)=>{
+  const analyzeWithBackend=async(listaArquivos)=>{
     const formData=new FormData();
-    formData.append("file",file.raw);
+    const arr=Array.isArray(listaArquivos)?listaArquivos:[listaArquivos];
+    // 1º arquivo vai em "file" (compatibilidade); os demais em "files"
+    arr.forEach((f,i)=>{
+      if(!f||!f.raw)return;
+      if(i===0)formData.append("file",f.raw);
+      formData.append("files",f.raw);
+    });
+    if(memorialFile&&memorialFile.raw)formData.append("memorial",memorialFile.raw);
     const res=await fetch(backendUrl.replace(/\/$/,"")+"/api/ai/analyze-plant",{method:"POST",body:formData});
     if(!res.ok){const err=await res.text();throw new Error(`Backend retornou ${res.status}: ${err}`)}
     return await res.json();
@@ -1245,6 +1482,10 @@ const AnalisePlantaPage=({setPage,setProjects,setSelProj})=>{
 
   const startAnalysis=async()=>{
     if(!files.length)return;
+    // Trava do plano grátis: 3 análises por mês
+    if(!ilimitado&&(usoMes||0)>=LIMITE_FREE_MES){
+      return; // a tela já mostra o bloqueio; segurança extra aqui
+    }
     setErrorMsg("");
     setAnalyzing(true);setStage(0);setResult(null);
 
@@ -1259,10 +1500,21 @@ const AnalisePlantaPage=({setPage,setProjects,setSelProj})=>{
     try{
       // Anima as etapas enquanto a IA processa
       const interval=setInterval(()=>{setStage(s=>s<stages.length-1?s+1:s)},2500);
-      const firstFile=files[0]; // por enquanto, analisa o primeiro arquivo
-      const r=await analyzeWithBackend(firstFile);
+      const r=await analyzeWithBackend(files);
       clearInterval(interval);
       setStage(stages.length);
+      // Registra a análise no banco (conta para o limite mensal) e atualiza o contador
+      if(session&&!r?.erro){
+        try{
+          await supabase.from("plant_analyses").insert({
+            user_id:session.user.id,
+            arquivo:files.map(f=>f.name).join(", ").slice(0,300)||null,
+            nota:r?.aprovacao?.nota!=null?Number(r.aprovacao.nota):null,
+            status:r?.aprovacao?.status||null,
+          });
+          setUsoMes(u=>(u||0)+1);
+        }catch(e){}
+      }
       setTimeout(()=>{setAnalyzing(false);setResult(r)},500);
     }catch(e){
       setAnalyzing(false);
@@ -1274,6 +1526,21 @@ const AnalisePlantaPage=({setPage,setProjects,setSelProj})=>{
 
   return(
     <div className="space-y-6 fade-in">
+      {limiteAtingido&&!result&&!analyzing&&(
+        <div className="max-w-2xl mx-auto fade-in">
+          <Card className="p-8 sm:p-12 text-center">
+            <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center shadow-lg shadow-orange-500/30 mb-6"><Icons.scan size={30} className="text-white"/></div>
+            <h1 className="text-2xl font-bold text-slate-800">Limite de análises do plano Gratuito</h1>
+            <p className="text-slate-500 mt-3 leading-relaxed">O plano Gratuito inclui <b>{LIMITE_FREE_MES} análises de planta por mês</b>, e você já usou todas neste mês. Assine o plano <b>Profissional</b> para ter <b>análises ilimitadas</b>.</p>
+            <p className="text-xs text-slate-400 mt-5">Importante: assine usando o <b>mesmo e-mail</b> com que você entra no app, para o plano ser liberado automaticamente.</p>
+            <div className="flex justify-center gap-3 mt-7">
+              <Btn variant="secondary" onClick={()=>setPage("dashboard")}><Icons.arrowLeft size={14}/> Voltar</Btn>
+              <a href="https://pay.kiwify.com.br/BHLRqDV" target="_blank" rel="noopener" className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-gradient-to-r from-orange-500 to-red-500 text-white font-semibold shadow-lg shadow-orange-500/20 hover:opacity-90 transition-opacity no-underline"><Icons.shield size={14}/> Assinar plano Profissional</a>
+            </div>
+          </Card>
+        </div>
+      )}
+      {!(limiteAtingido&&!result&&!analyzing)&&(<>
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div><h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2"><Icons.scan size={24} className="text-orange-500"/> Análise de Planta com IA</h1><p className="text-slate-500 text-sm mt-1">Upload técnico — PDF, PNG, JPG (IA real); DWG/DXF/RVT/IFC (orientação)</p></div>
         {/* Indicador discreto de status — sem painel de configuração */}
@@ -1281,6 +1548,12 @@ const AnalisePlantaPage=({setPage,setProjects,setSelProj})=>{
           <div className={`w-2 h-2 rounded-full ${backendStatus?.ai_enabled?"bg-emerald-500":backendStatus?.error?"bg-red-500":"bg-amber-500"} ${!backendStatus?"pulse-dot":""}`}/>
           <span className="text-xs font-medium text-slate-600">{backendStatus?.ai_enabled?"IA conectada":backendStatus?.error?"IA offline":"Conectando..."}</span>
         </div>
+        {!ilimitado&&usoMes!==null&&(
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-orange-50 border border-orange-200">
+            <Icons.scan size={13} className="text-orange-500"/>
+            <span className="text-xs font-medium text-orange-700">{restantes} de {LIMITE_FREE_MES} análises este mês</span>
+          </div>
+        )}
       </div>
 
       {/* Aviso técnico */}
@@ -1318,7 +1591,14 @@ const AnalisePlantaPage=({setPage,setProjects,setSelProj})=>{
                   <button onClick={()=>removeFile(f.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors"><Icons.trash size={15}/></button>
                 </div>
               )})}
-              <div className="pt-3 flex justify-end"><Btn onClick={startAnalysis}><Icons.sparkles size={14}/> Analisar com IA</Btn></div>
+              <div className="mt-3 p-3 bg-blue-50/40 rounded-lg border border-blue-100">
+                <p className="text-xs font-semibold text-slate-600 mb-2">Memorial descritivo <span className="font-normal text-slate-400">(opcional — melhora a auditoria)</span></p>
+                {memorialFile
+                  ? <div className="flex items-center gap-3 p-2.5 bg-white rounded-lg border border-slate-200"><div className="w-8 h-8 rounded-lg flex items-center justify-center bg-blue-100 text-blue-700"><Icons.book size={15}/></div><div className="flex-1 min-w-0"><p className="text-sm font-medium text-slate-800 truncate">{memorialFile.name}</p><p className="text-xs text-slate-500">{formatSize(memorialFile.size)}</p></div><button onClick={()=>setMemorialFile(null)} className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500"><Icons.trash size={15}/></button></div>
+                  : <label className="inline-flex items-center gap-2 px-3 py-2 cursor-pointer bg-white border border-slate-300 rounded-lg text-sm text-slate-600 hover:border-blue-300"><input type="file" accept=".pdf,.png,.jpg,.jpeg" onChange={handleMemorial} className="hidden"/><Icons.upload size={14}/> Anexar memorial (PDF)</label>
+                }
+              </div>
+              <div className="pt-3 flex justify-end"><Btn onClick={startAnalysis}><Icons.sparkles size={14}/> Auditar com IA</Btn></div>
             </div>
           )}
         </Card>
@@ -1344,25 +1624,120 @@ const AnalisePlantaPage=({setPage,setProjects,setSelProj})=>{
       {/* Result */}
       {result&&(<>
         <Card className="p-6">
-          <div className="flex items-center justify-between mb-5"><div><h2 className="text-lg font-bold text-slate-800 flex items-center gap-2"><Icons.sparkles size={20} className="text-orange-500"/> Relatório de Análise</h2><p className="text-xs text-slate-500 mt-1">Análise gerada por IA — todos os dados precisam de confirmação técnica</p></div><div className="flex items-center gap-2"><Confidence level={result.confianca_geral}/></div></div>
+          <div className="flex items-center justify-between mb-5"><div><h2 className="text-lg font-bold text-slate-800 flex items-center gap-2"><Icons.sparkles size={20} className="text-orange-500"/> Auditoria da Planta</h2><p className="text-xs text-slate-500 mt-1">Gerado por IA — confirme antes de protocolar</p></div><div className="flex items-center gap-2"><Confidence level={result.confianca_geral}/></div></div>
 
-          {/* Sugestão de enquadramento */}
-          <div className="mb-6 p-5 rounded-xl bg-gradient-to-br from-orange-50 to-red-50/50 border border-orange-200">
-            <p className="text-xs font-semibold text-orange-700 uppercase tracking-wider mb-3">Sugestão de Enquadramento (orientativa)</p>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div><p className="text-[10px] text-slate-500 uppercase">Grupo/Divisão</p><p className="font-bold text-slate-800">{result.sugestao_enquadramento.grupo}-{result.sugestao_enquadramento.divisao.split("-")[1]}</p></div>
-              <div><p className="text-[10px] text-slate-500 uppercase">Risco</p><Badge variant={result.sugestao_enquadramento.risco}>{result.sugestao_enquadramento.risco}</Badge></div>
-              <div><p className="text-[10px] text-slate-500 uppercase">Processo</p><p className="font-bold text-slate-800 text-sm">{result.sugestao_enquadramento.processo}</p></div>
-              <div><p className="text-[10px] text-slate-500 uppercase">ITs aplicáveis</p><p className="font-bold text-slate-800 text-sm">{result.sugestao_enquadramento.its_aplicaveis.length} ITs</p></div>
+          {/* NOTA + STATUS de aprovação (quando a IA audita) */}
+          {result.aprovacao&&(()=>{
+            const nota=Number(result.aprovacao.nota);
+            const cor=nota>=9?"emerald":nota>=7?"amber":nota>=5?"orange":"red";
+            const corHex={emerald:"#10b981",amber:"#f59e0b",orange:"#f97316",red:"#ef4444"}[cor];
+            const box={emerald:"bg-emerald-50 border-emerald-200",amber:"bg-amber-50 border-amber-200",orange:"bg-orange-50 border-orange-200",red:"bg-red-50 border-red-200"}[cor];
+            const txt={emerald:"text-emerald-700",amber:"text-amber-700",orange:"text-orange-700",red:"text-red-700"}[cor];
+            const pct=Math.max(0,Math.min(100,(isNaN(nota)?0:nota)*10));
+            return(<div className={`mb-5 p-5 rounded-xl border ${box}`}>
+              <div className="flex items-center gap-5 flex-wrap">
+                <div className="flex items-center justify-center w-20 h-20 rounded-full flex-shrink-0" style={{background:`conic-gradient(${corHex} ${pct}%, #e5e7eb 0)`}}>
+                  <div className="w-16 h-16 rounded-full bg-white flex flex-col items-center justify-center">
+                    <span className="text-xl font-bold text-slate-800">{isNaN(nota)?"—":nota.toFixed(1)}</span>
+                    <span className="text-[8px] text-slate-400 uppercase tracking-wider">/ 10</span>
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Nível de aprovação</p>
+                  <p className={`text-xl font-bold ${txt}`}>{result.aprovacao.status||"—"}</p>
+                  {result.aprovacao.resumo&&<p className="text-xs text-slate-600 mt-1">{result.aprovacao.resumo}</p>}
+                </div>
+              </div>
+            </div>);
+          })()}
+
+          {/* SISTEMAS AUDITADOS — conforme / não conforme / pendente */}
+          {Array.isArray(result.sistemas_auditados)&&result.sistemas_auditados.length>0&&(
+            <div className="mb-5">
+              <p className="text-sm font-bold text-slate-700 mb-2 flex items-center gap-2"><Icons.shield size={16} className="text-blue-500"/> Sistemas exigidos × encontrados</p>
+              <div className="space-y-1.5">{result.sistemas_auditados.map((s,i)=>{
+                const ok=s.situacao==="conforme",pend=s.situacao==="pendente";
+                const box=ok?"bg-emerald-50 border-emerald-100":pend?"bg-amber-50 border-amber-100":"bg-red-50 border-red-100";
+                const pill=ok?"bg-emerald-100 text-emerald-700":pend?"bg-amber-100 text-amber-700":"bg-red-100 text-red-700";
+                return(<div key={i} className={`flex items-start gap-2.5 p-3 rounded-lg border ${box}`}>
+                  <span className="mt-0.5 flex-shrink-0">{ok?<Icons.check size={16} className="text-emerald-500"/>:pend?<Icons.alert size={16} className="text-amber-500"/>:<Icons.x size={16} className="text-red-500"/>}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-slate-800">{s.sistema} {s.it&&<span className="text-[11px] font-normal text-slate-400">({s.it})</span>}</p>
+                    {s.observacao&&<p className="text-[11px] text-slate-600 mt-0.5">{s.observacao}</p>}
+                  </div>
+                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${pill}`}>{ok?"Conforme":pend?"Pendente":"Não conforme"}</span>
+                </div>);
+              })}</div>
             </div>
-            <p className="text-xs text-slate-600 mt-3 italic">{result.sugestao_enquadramento.justificativa}</p>
-            <div className="flex flex-wrap gap-1.5 mt-3">{result.sugestao_enquadramento.its_aplicaveis.map(it=><Badge key={it}>{it}</Badge>)}</div>
+          )}
+
+          {/* Divergências planta × memorial */}
+          {Array.isArray(result.divergencias_planta_memorial)&&result.divergencias_planta_memorial.length>0&&(
+            <div className="mb-5 p-3 bg-red-50 rounded-lg border border-red-100">
+              <p className="text-xs font-semibold text-red-700 mb-1.5 flex items-center gap-1.5"><Icons.alert size={13}/> Divergências entre planta e memorial</p>
+              <ul className="text-[12px] text-slate-700 space-y-1 list-disc pl-4">{result.divergencias_planta_memorial.map((d,i)=><li key={i}>{d}</li>)}</ul>
+            </div>
+          )}
+
+          {/* 1. Enquadramento (PTS ou PT) */}
+          {result.sugestao_enquadramento&&(
+          <div className="mb-5 p-5 rounded-xl bg-gradient-to-br from-orange-50 to-red-50/50 border border-orange-200">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div>
+                <p className="text-[10px] font-semibold text-orange-700 uppercase tracking-wider mb-1">Enquadramento automático</p>
+                <p className="text-2xl font-bold text-slate-800">{result.sugestao_enquadramento.processo}</p>
+                <p className="text-xs text-slate-600 mt-1">{result.sugestao_enquadramento.grupo}-{(result.sugestao_enquadramento.divisao||"").split("-")[1]} • Risco {String(result.sugestao_enquadramento.risco||"").toLowerCase()}</p>
+              </div>
+              <Badge variant={result.sugestao_enquadramento.risco}>{result.sugestao_enquadramento.risco}</Badge>
+            </div>
+          </div>
+          )}
+
+          {/* 2. Sistemas exigidos pela norma (ITs) */}
+          {(()=>{
+            const enq=result.sugestao_enquadramento||{};
+            const ext=(regex,padrao=0)=>{const item=(result.encontrados||[]).find(d=>regex.test(d.campo||""));if(!item)return padrao;const m=String(item.valor||"").replace(/\./g,"").replace(",",".").match(/(\d+(?:\.\d+)?)/);return m?Number(m[1]):padrao;};
+            const area=ext(/área.*constru|construída|construido/i);
+            const pav=ext(/pavimento/i,1);
+            const alt=ext(/altura/i);
+            const grupo=(enq.grupo||"D").toUpperCase();
+            let divisao=enq.divisao||"D-1"; if(divisao&&!divisao.includes("-")&&grupo)divisao=grupo+"-"+divisao; divisao=divisao.toUpperCase();
+            const cg=CARGA[divisao]||300; const ri=risco(cg);
+            const pop=Math.ceil((area||0)*(POP_M2[divisao]||.1));
+            let exigidos=[];
+            try{exigidos=sistemas(area||0,alt||0,grupo,divisao,ri.n,false,pop,pav||1)||[];}catch(e){exigidos=[];}
+            // fallback: deriva dos ITs aplicáveis sugeridos pela IA
+            if(!exigidos.length&&enq.its_aplicaveis){
+              const itParaSistema={"IT-21":"EXTINTORES","IT-11":"SAIDA_EMERGENCIA","IT-18":"ILUM_EMERGENCIA","IT-20":"SINALIZACAO","IT-19":"ALARME","IT-22":"HIDRANTES","IT-08":"SEG_ESTRUTURAL","IT-09":"COMPARTIMENTACAO","IT-17":"BRIGADA","IT-23":"CHUVEIROS_AUTO","IT-13":"VENTILACAO_MECANICA"};
+              exigidos=enq.its_aplicaveis.map(it=>itParaSistema[it]).filter(Boolean);
+            }
+            return(<div className="mb-5">
+              <p className="text-sm font-bold text-slate-700 mb-1 flex items-center gap-2"><Icons.shield size={16} className="text-blue-500"/> Sistemas exigidos para esta edificação</p>
+              <p className="text-[11px] text-slate-500 mb-3">Conforme as Instruções Técnicas do CBMBA, para {grupo}-{divisao.split("-")[1]} (risco {String(enq.risco||ri.n||"").toLowerCase()})</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {exigidos.map(s=>(<div key={s} className="flex items-center gap-2 p-2.5 bg-emerald-50/60 rounded-lg border border-emerald-100"><Icons.check size={15} className="text-emerald-500 flex-shrink-0"/><span className="text-sm text-slate-700">{SN[s]||s}</span></div>))}
+                {exigidos.length===0&&<span className="text-xs text-slate-500">Os sistemas serão definidos no dimensionamento.</span>}
+              </div>
+            </div>);
+          })()}
+
+          {/* 3, 4, 5 — o que será gerado ao aplicar */}
+          <div className="mb-2 grid sm:grid-cols-3 gap-3">
+            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-center"><Icons.calculator size={20} className="text-orange-500 mx-auto mb-2"/><p className="text-xs font-semibold text-slate-700">Memórias de cálculo</p><p className="text-[11px] text-slate-500 mt-0.5">Geradas por sistema</p></div>
+            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-center"><Icons.book size={20} className="text-orange-500 mx-auto mb-2"/><p className="text-xs font-semibold text-slate-700">Memorial descritivo</p><p className="text-[11px] text-slate-500 mt-0.5">Emitido automaticamente</p></div>
+            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-center"><Icons.checklist size={20} className="text-orange-500 mx-auto mb-2"/><p className="text-xs font-semibold text-slate-700">Checklist CBMBA</p><p className="text-[11px] text-slate-500 mt-0.5">Itens de aprovação</p></div>
           </div>
 
-          {/* Dados encontrados */}
-          <div className="mb-6">
-            <p className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2"><Icons.check size={16} className="text-emerald-500"/> Dados extraídos pela IA</p>
-            <div className="space-y-2">{result.encontrados.map((d,i)=>(
+          {/* Pendências (resumidas) */}
+          {(result.pendencias&&result.pendencias.length>0)&&(<div className="mt-5 p-3 bg-amber-50/60 rounded-lg border border-amber-100">
+            <p className="text-xs font-semibold text-amber-700 mb-1.5 flex items-center gap-1.5"><Icons.alert size={13}/> {result.pendencias.length} {result.pendencias.length===1?"item a confirmar":"itens a confirmar"} manualmente</p>
+            <p className="text-[11px] text-slate-600">{result.pendencias.slice(0,2).join(" • ")}{result.pendencias.length>2?" …":""}</p>
+          </div>)}
+
+          {/* Detalhes técnicos opcionais (recolhido por padrão) */}
+          <details className="mt-4 group">
+            <summary className="cursor-pointer text-xs font-semibold text-slate-500 hover:text-orange-500 select-none list-none flex items-center gap-1.5"><Icons.chevronRight size={13} className="group-open:rotate-90 transition-transform"/> Ver dados extraídos pela IA</summary>
+            <div className="mt-3 space-y-2">{(result.encontrados||[]).map((d,i)=>(
               <div key={i} className="p-3 bg-slate-50 rounded-lg border border-slate-200">
                 <div className="flex items-start justify-between gap-3 flex-wrap">
                   <div className="flex-1 min-w-0">
@@ -1371,53 +1746,15 @@ const AnalisePlantaPage=({setPage,setProjects,setSelProj})=>{
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <Confidence level={d.confianca}/>
-                    <OrigemDado tipo={d.origem}/>
                     <button onClick={()=>setEditing(p=>({...p,[i]:!p[i]}))} className="p-1.5 rounded hover:bg-orange-50 text-slate-400 hover:text-orange-500"><Icons.edit size={13}/></button>
                   </div>
                 </div>
               </div>
             ))}</div>
-          </div>
-
-          {/* Sistemas identificados */}
-          <div className="mb-6">
-            <p className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2"><Icons.shield size={16} className="text-blue-500"/> Sistemas PPCI identificados na planta</p>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead><tr className="border-b border-slate-200">{["Sistema","Encontrado","Identificação","Confiança"].map(h=><th key={h} className="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider px-3 py-2">{h}</th>)}</tr></thead>
-                <tbody>{result.sistemas_identificados.map((s,i)=>(
-                  <tr key={i} className="border-b border-slate-100">
-                    <td className="px-3 py-2.5 text-slate-700">{s.sistema}</td>
-                    <td className="px-3 py-2.5">{s.encontrado?<span className="text-emerald-600 text-xs font-semibold flex items-center gap-1"><Icons.check size={12}/> Sim</span>:<span className="text-red-500 text-xs font-semibold">Não</span>}</td>
-                    <td className="px-3 py-2.5 text-slate-600 text-xs">{s.quantidade}</td>
-                    <td className="px-3 py-2.5"><Confidence level={s.confianca}/></td>
-                  </tr>
-                ))}</tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Pendências */}
-          <div className="mb-6">
-            <p className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2"><Icons.alert size={16} className="text-amber-500"/> Pendências para confirmação manual</p>
-            <div className="space-y-1.5">{result.pendencias.map((p,i)=>(
-              <div key={i} className="flex items-start gap-2 p-2.5 bg-amber-50/50 rounded-lg border border-amber-100"><span className="text-amber-500 text-xs mt-0.5">❓</span><span className="text-sm text-slate-700">{p}</span></div>
-            ))}</div>
-          </div>
-
-          {/* Inconsistências */}
-          {result.inconsistencias.length>0&&(<div>
-            <p className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2"><Icons.alert size={16} className="text-red-500"/> Inconsistências e observações</p>
-            <div className="space-y-2">{result.inconsistencias.map((inc,i)=>(
-              <div key={i} className={`flex items-start gap-2 p-3 rounded-lg border ${inc.tipo==="warn"?"bg-red-50/50 border-red-200":"bg-blue-50/50 border-blue-200"}`}>
-                {inc.tipo==="warn"?<Icons.alert size={14} className="text-red-500 flex-shrink-0 mt-0.5"/>:<Icons.info size={14} className="text-blue-500 flex-shrink-0 mt-0.5"/>}
-                <span className="text-xs text-slate-700">{inc.texto}</span>
-              </div>
-            ))}</div>
-          </div>)}
+          </details>
         </Card>
 
-        <div className="flex justify-between gap-2 flex-wrap"><Btn variant="secondary" onClick={()=>{setResult(null);setFiles([]);}}><Icons.arrowLeft size={14}/> Nova análise</Btn><Btn onClick={()=>{
+        <div className="flex justify-between gap-2 flex-wrap"><Btn variant="secondary" onClick={()=>{setResult(null);setFiles([]);}}><Icons.arrowLeft size={14}/> Nova análise</Btn><Btn onClick={async()=>{
           // Extrai números dos campos da análise da IA (área, pavimentos, altura)
           const extrair=(regex,padrao=0)=>{
             const item=result.encontrados?.find(d=>regex.test(d.campo||""));
@@ -1455,10 +1792,12 @@ const AnalisePlantaPage=({setPage,setProjects,setSelProj})=>{
             crea_responsavel:"",
             origem_ia:true,
           };
-          setProjects(p=>[novoProj,...p]);
-          setSelProj(novoProj);
-          setPage("calculos");
+          const salvo=salvarProjeto?await salvarProjeto(novoProj):novoProj;
+          if(!salvarProjeto)setProjects(p=>[novoProj,...p]);
+          setSelProj(salvo);
+          setPage("dashboard");
         }}><Icons.check size={14}/> Aplicar ao projeto</Btn></div>
+      </>)}
       </>)}
     </div>
   );
@@ -1632,6 +1971,84 @@ const HidrantesIsoPage=()=>{
       return `<tr style="${eCritico?"background:#fff7ed":""}"><td><b>${r.hidrante.tag}${eCritico?' <span style="color:#ea580c;font-size:9px">★ crítico</span>':""}</b></td><td>${r.hidrante.pavimento||"—"}</td><td>${r.hidrante.cota.toFixed(1)} m</td><td style="font-family:monospace;color:#ea580c">${r.calc.perda_total.toFixed(2)}</td><td><b>${r.calc.pressao_disponivel?.toFixed(2)}</b></td><td>${r.calc.pressao_req}</td><td><span class="${r.calc.atende?"badge-ok":"badge-nok"}">${r.calc.atende?"✓ OK":"✗ Insuficiente"}</span></td></tr>`;
     }).join("");
 
+    // ===== PLANILHA DE CÁLCULO HIDRÁULICO (formato técnico de memorial) =====
+    // Usa o caminho mais desfavorável (crítico). Colunas conforme planilha NBR/IT.
+    const matTradEsg={aco_galv:"Aço Galvanizado",aco_carb:"Aço Carbono",ferro_fund:"Ferro Fundido",pvc:"PVC",cobre:"Cobre"};
+    let planilhaHTML="";
+    if(caminhoCritico&&caminhoCritico.calc&&caminhoCritico.calc.caminho){
+      const cam=caminhoCritico.calc.caminho;
+      const hCrit=caminhoCritico.hidrante;
+      const diamMang=cam.find(d=>d.trecho.hidrante_destino)?.trecho.diametro||38;
+      const tuboTxt=matTradEsg[cam[0]?.trecho.material]||"Aço Galvanizado";
+      let pressaoAcum=params.pressao_recalque; // m.c.a. saindo da bomba
+      let qAcumMax=0;
+      const linhas=cam.map((d)=>{
+        const area=Math.PI*Math.pow((d.trecho.diametro/1000)/2,2); // m²
+        const perdaCanal=d.perda;                 // perda da canalização no trecho (m.c.a.)
+        const perdaMang=Number(d.trecho.perda_mangueira)||0;
+        const perdaEsg=Number(d.trecho.perda_esguicho)||0;
+        const perdaTotalTrecho=perdaCanal+perdaMang+perdaEsg;
+        const desnivelTrecho=Number(d.trecho.desnivel)||0;
+        pressaoAcum=pressaoAcum-perdaTotalTrecho-desnivelTrecho;
+        const fatorVazao=d.Q?(d.Q/2):0; // L/min/2 (coluna "Fator de vazão" da planilha)
+        if(d.Q>qAcumMax)qAcumMax=d.Q;
+        return `<tr>
+          <td><b>${d.trecho.de}-${d.trecho.para}</b></td>
+          <td>${d.Q.toFixed(1)}</td>
+          <td>${d.trecho.diametro}</td>
+          <td>${d.L_real.toFixed(2)}</td>
+          <td>${d.L_eq.toFixed(2)}</td>
+          <td>${d.L_total.toFixed(2)}</td>
+          <td>${d.J.toFixed(3)}</td>
+          <td>${perdaCanal.toFixed(2)}</td>
+          <td>${perdaMang?perdaMang.toFixed(2):"—"}</td>
+          <td>${perdaEsg?perdaEsg.toFixed(2):"—"}</td>
+          <td><b>${perdaTotalTrecho.toFixed(2)}</b></td>
+          <td>${desnivelTrecho?desnivelTrecho.toFixed(2):"0,00".replace(",",".")}</td>
+          <td>${pressaoAcum.toFixed(2)}</td>
+          <td>${fatorVazao?fatorVazao.toFixed(2):"—"}</td>
+          <td>${area.toFixed(4)}</td>
+          <td>${d.velocidade.toFixed(3)}</td>
+        </tr>`;
+      }).join("");
+      const Hman=caminhoCritico.calc.perda_total+caminhoCritico.calc.desnivel+(hCrit?.pressao_req||0);
+      const vazaoSist=params.vazao_hid*params.n_simultaneos;
+      const potencia=(vazaoSist/60000*Hman*1000*9.81)/(0.6*735.5); // cv aprox (rend 0,6)
+      planilhaHTML=`
+<h2>5b. Planilha de Cálculo Hidráulico (caminho mais desfavorável)</h2>
+<table class="hidro-head"><tbody>
+  <tr><td><b>Sistema:</b> Tipo 2</td><td><b>Ø mangueira (mm):</b> ${diamMang}</td><td><b>Tubo:</b> ${tuboTxt}</td><td><b>Esguicho regulável DN:</b> 40</td></tr>
+</tbody></table>
+<div style="overflow-x:auto">
+<table class="hidro">
+  <thead>
+    <tr>
+      <th rowspan="2">Trecho</th><th rowspan="2">Vazão acumulada</th><th rowspan="2">Diâmetro nominal</th>
+      <th colspan="3">Comprimento</th>
+      <th colspan="4">Perda de carga</th>
+      <th rowspan="2">Total</th><th rowspan="2">Desnível do trecho</th><th rowspan="2">Pressão no ponto do trecho</th><th rowspan="2">Fator de vazão</th><th rowspan="2">Área da tubulação</th><th rowspan="2">Velocidade na canalização</th>
+    </tr>
+    <tr>
+      <th>Seguimentos retos</th><th>Equivalentes</th><th>Teórico total</th>
+      <th>Perda de carga/m</th><th>Canalização</th><th>Mangueira</th><th>Esguicho</th>
+    </tr>
+    <tr class="un">
+      <th></th><th>l/min</th><th>mm</th><th>m</th><th>m</th><th>m</th><th>mca/m</th><th>mca</th><th>mca</th><th>mca</th><th>mca</th><th>m</th><th>mca</th><th>l/min/2</th><th>m²</th><th>m/s</th>
+    </tr>
+  </thead>
+  <tbody>${linhas}</tbody>
+</table>
+</div>
+<table class="hidro-foot"><tbody>
+  <tr><th colspan="2">Bomba de Incêndio e RTI</th></tr>
+  <tr><td>Hman (mca): ${Hman.toFixed(2)}</td><td rowspan="3" style="vertical-align:top"><b>Reserva Técnica de Incêndio</b><br>Volume: 20 m³</td></tr>
+  <tr><td>Vazão: ${vazaoSist.toFixed(2)} l/min &nbsp;|&nbsp; ${(vazaoSist*60/1000).toFixed(1)} m³/h</td></tr>
+  <tr><td>Potência (cv): ${potencia.toFixed(2)}</td></tr>
+</tbody></table>
+`;
+    }
+
+
     const html=`<!DOCTYPE html>
 <html lang="pt-BR"><head><meta charset="UTF-8"><title>Relatório Técnico — Sistema de Hidrantes</title>
 <style>
@@ -1670,6 +2087,15 @@ const HidrantesIsoPage=()=>{
     .badge-ok,.badge-nok,.conclusao{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   }
   @page{size:A4;margin:1.5cm}
+  /* Planilha de cálculo hidráulico (formato técnico) */
+  table.hidro,table.hidro-head,table.hidro-foot{border:1px solid #1e293b;font-size:9px}
+  table.hidro th,table.hidro td{border:1px solid #94a3b8;padding:3px 4px;text-align:center;color:#1e293b}
+  table.hidro thead th{background:#e2e8f0;color:#1e293b;text-transform:none;letter-spacing:0;font-size:8.5px;font-weight:bold;vertical-align:middle}
+  table.hidro thead tr.un th{background:#f1f5f9;font-weight:normal;font-style:italic;color:#475569}
+  table.hidro tbody td{background:white}
+  table.hidro tbody tr:nth-child(even) td{background:#f8fafc}
+  table.hidro-head td,table.hidro-foot td,table.hidro-foot th{border:1px solid #94a3b8;padding:6px 8px;font-size:11px;text-align:left}
+  table.hidro-foot th{background:#1e293b;color:white;text-align:center}
 </style></head><body>
 
 <div class="toolbar no-print">
@@ -1712,6 +2138,8 @@ ${caminhoCritico?`
 <table><thead><tr><th>Hidrante</th><th>Pavimento</th><th>Cota</th><th>Perda (m.c.a.)</th><th>P. disponível</th><th>P. requerida</th><th>Status</th></tr></thead><tbody>${tabComparativo}</tbody></table>
 `:"<p>Nenhum caminho calculado.</p>"}
 
+${planilhaHTML}
+
 <h2>6. Conclusão Técnica</h2>
 <div class="conclusao ${sistemaAtende?"ok":"nok"}">
   ${sistemaAtende?`✓ SISTEMA ATENDE AOS REQUISITOS — ${hidrantesOK} de ${totalHidrantes} hidrantes em conformidade`:`✗ SISTEMA NÃO ATENDE INTEGRALMENTE — ${hidrantesNOK} de ${totalHidrantes} hidrantes com pressão insuficiente`}
@@ -1724,7 +2152,7 @@ ${caminhoCritico?`
 </div>
 
 <div class="footer">
-  <p><b>PPCI SaaS — Sistema de Dimensionamento PPCI</b></p>
+  <p><b>PPCI PRO — Sistema de Dimensionamento PPCI</b></p>
   <p>Este documento foi gerado automaticamente como apoio ao dimensionamento técnico.<br>
   A responsabilidade técnica final é integralmente do profissional habilitado, que deve conferir todos os dados, normas aplicáveis e exigências do Corpo de Bombeiros.</p>
 </div>
@@ -1768,7 +2196,7 @@ ${caminhoCritico?`
           <div className="flex items-center justify-between mb-4"><div><h2 className="text-lg font-bold text-slate-800">Trechos hidráulicos</h2><p className="text-xs text-slate-500">Cadastre os trechos da tubulação. Use "Bomba" como nó inicial.</p></div><Btn size="sm" onClick={addTrecho}><Icons.plus size={14}/> Adicionar trecho</Btn></div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead><tr className="border-b border-slate-200">{["De","Para","Hidr.","Ø (mm)","Material","L (m)","Conexões",""].map(h=><th key={h} className="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider px-2 py-2">{h}</th>)}</tr></thead>
+              <thead><tr className="border-b border-slate-200">{["De","Para","Hidr.","Ø (mm)","Material","L (m)","Mang. (mca)","Esg. (mca)","Desnível (m)","Conexões",""].map(h=><th key={h} className="text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider px-2 py-2">{h}</th>)}</tr></thead>
               <tbody>{trechos.map(t=>(
                 <tr key={t.id} className="border-b border-slate-100 align-top">
                   <td className="px-2 py-2"><input value={t.de} onChange={e=>updTrecho(t.id,"de",e.target.value)} className="w-20 rounded border border-slate-300 px-2 py-1 text-xs outline-none focus:border-orange-400" placeholder="Nó"/></td>
@@ -1777,6 +2205,9 @@ ${caminhoCritico?`
                   <td className="px-2 py-2"><select value={t.diametro} onChange={e=>updTrecho(t.id,"diametro",Number(e.target.value))} className="w-20 rounded border border-slate-300 px-1 py-1 text-xs outline-none focus:border-orange-400"><option value={63}>63</option><option value={75}>75</option><option value={100}>100</option><option value={150}>150</option></select></td>
                   <td className="px-2 py-2"><select value={t.material} onChange={e=>updTrecho(t.id,"material",e.target.value)} className="w-32 rounded border border-slate-300 px-1 py-1 text-xs outline-none focus:border-orange-400">{Object.entries(COEFICIENTES_C).map(([k,v])=><option key={k} value={k}>{v.nome} (C={v.C})</option>)}</select></td>
                   <td className="px-2 py-2"><input type="number" step="0.1" value={t.comprimento} onChange={e=>updTrecho(t.id,"comprimento",Number(e.target.value)||0)} className="w-20 rounded border border-slate-300 px-2 py-1 text-xs outline-none focus:border-orange-400"/></td>
+                  <td className="px-2 py-2"><input type="number" step="0.01" value={t.perda_mangueira||""} onChange={e=>updTrecho(t.id,"perda_mangueira",Number(e.target.value)||0)} className="w-16 rounded border border-slate-300 px-2 py-1 text-xs outline-none focus:border-orange-400" placeholder="0"/></td>
+                  <td className="px-2 py-2"><input type="number" step="0.01" value={t.perda_esguicho||""} onChange={e=>updTrecho(t.id,"perda_esguicho",Number(e.target.value)||0)} className="w-16 rounded border border-slate-300 px-2 py-1 text-xs outline-none focus:border-orange-400" placeholder="0"/></td>
+                  <td className="px-2 py-2"><input type="number" step="0.1" value={t.desnivel||""} onChange={e=>updTrecho(t.id,"desnivel",Number(e.target.value)||0)} className="w-16 rounded border border-slate-300 px-2 py-1 text-xs outline-none focus:border-orange-400" placeholder="0"/></td>
                   <td className="px-2 py-2">
                     <div className="space-y-1">{t.conexoes.map((c,i)=>(
                       <div key={i} className="flex items-center gap-1">
@@ -1965,12 +2396,24 @@ const CalcPopulacaoPage=({project})=>{
   const pavimentos=Number(project.numero_pavimentos)||1;
   const areaPav=areaTotal/Math.max(pavimentos,1);
 
-  // Cálculo por pavimento (usa fator padrão ou override)
+  // Áreas reais por pavimento (usa a lista informada; vazios = média do restante)
+  const areasPavPop=(()=>{
+    const lista=Array.isArray(project.areas_por_pavimento)?project.areas_por_pavimento:[];
+    const arr=[];let somaInf=0,nInf=0;
+    for(let i=0;i<pavimentos;i++){const v=Number(lista[i]);if(v>0){arr[i]=v;somaInf+=v;nInf++;}else arr[i]=null;}
+    const restante=Math.max(0,areaTotal-somaInf),nVazios=pavimentos-nInf;
+    const media=nVazios>0?(restante>0?restante/nVazios:areaTotal/Math.max(pavimentos,1)):0;
+    for(let i=0;i<pavimentos;i++)if(arr[i]==null)arr[i]=media;
+    return arr;
+  })();
+
+  // Cálculo por pavimento (usa fator padrão ou override) — com a área REAL de cada pavimento
   const pavimentosData=[];
   for(let i=1;i<=pavimentos;i++){
     const fAplic=Number(override[i])||fatorNormativo;
-    const pop=Math.ceil(areaPav*fAplic);
-    pavimentosData.push({pav:i,area:areaPav,fator:fAplic,pop,custom:Boolean(override[i])});
+    const aReal=areasPavPop[i-1]||areaPav;
+    const pop=Math.ceil(aReal*fAplic);
+    pavimentosData.push({pav:i,area:aReal,fator:fAplic,pop,custom:Boolean(override[i])});
   }
   const totalPav=pavimentosData.reduce((acc,p)=>acc+p.pop,0);
 
@@ -3264,9 +3707,20 @@ const CalcSprinklersPage=({project})=>{
   const pe=Number(config.pe_direito)||3;
   const pav=Number(project.numero_pavimentos)||1;
 
-  // Quantidade de sprinklers
-  const nSprinklersPorPav=Math.ceil((area/pav)/c.area_max_sprinkler);
-  const nSprinklersTotal=nSprinklersPorPav*pav;
+  // Quantidade de sprinklers — por pavimento usando a ÁREA REAL de cada um (soma).
+  const areasPavSpk=(()=>{
+    const lista=Array.isArray(project.areas_por_pavimento)?project.areas_por_pavimento:[];
+    const arr=[];let somaInf=0,nInf=0;
+    for(let i=0;i<pav;i++){const v=Number(lista[i]);if(v>0){arr[i]=v;somaInf+=v;nInf++;}else arr[i]=null;}
+    const restante=Math.max(0,area-somaInf),nVazios=pav-nInf;
+    const media=nVazios>0?(restante>0?restante/nVazios:area/Math.max(pav,1)):0;
+    for(let i=0;i<pav;i++)if(arr[i]==null)arr[i]=media;
+    return arr;
+  })();
+  const temAreasReaisSpk=Array.isArray(project.areas_por_pavimento)&&project.areas_por_pavimento.some(v=>Number(v)>0);
+  const spkPorPav=areasPavSpk.map(a=>Math.ceil(a/c.area_max_sprinkler));
+  const nSprinklersTotal=spkPorPav.reduce((s,n)=>s+n,0);
+  const nSprinklersPorPav=spkPorPav.length?Math.max(...spkPorPav):0;
 
   // Vazão total mínima
   // Q (L/min) = densidade (L/min/m²) × área operação (m²)
@@ -5044,169 +5498,62 @@ const ProjetoSimplificadoPage=({project})=>{
   );
 };
 
-// ---- PLANOS & CHECKOUT ----
+// ---- APP ----
 // ============================================================
-const PlanosPage=({profile,onPlanChange})=>{
-  const planoAtual=profile?.plan||"free";
-  const [loading,setLoading]=useState(null);
-  const [msg,setMsg]=useState("");
+// ╔══════════════════════════════════════════════════════════╗
+// ║  AVISOS / NOVIDADES — edite esta lista para avisar clientes ║
+// ║  Coloque o mais novo SEMPRE no topo. data no formato AAAA-MM-DD ║
+// ╚══════════════════════════════════════════════════════════╝
+const AVISOS=[
+  {data:"2026-06-02", titulo:"Análise de planta aprimorada", texto:"Agora a auditoria por IA considera todas as pranchas enviadas (planta baixa, cortes e cobertura) em conjunto."},
+  {data:"2026-06-01", titulo:"Gestão de projetos no Dashboard", texto:"Adicionamos faturamento, status do projeto e edição de dados direto no painel."},
+  {data:"2026-05-30", titulo:"Bem-vindo ao PPCI PRO!", texto:"Estamos em fase de melhorias contínuas. Novidades aparecerão aqui no sininho. 🔔"},
+];
 
-  // Ao voltar do checkout Pagar.me, o parâmetro ?upgraded=pro pode estar na URL
-  useEffect(()=>{
-    const p=new URLSearchParams(window.location.search).get("upgraded");
-    if(p&&["pro","escritorio"].includes(p)){
-      setMsg(`Pagamento confirmado! Seu plano foi atualizado para ${p==="pro"?"Pro":"Escritório"}.`);
-      supabase.from("profiles").update({plan:p,plan_expires_at:new Date(Date.now()+30*24*60*60*1000).toISOString()})
-        .eq("id",profile?.id)
-        .then(()=>onPlanChange&&onPlanChange(p));
-      window.history.replaceState({},"",window.location.pathname);
-    }
-  },[]);
-
-  const PLANOS=[
-    {
-      id:"free",
-      nome:"Gratuito",
-      preco:"R$ 0",
-      periodo:"/sempre",
-      cor:"slate",
-      destaque:false,
-      itens:[
-        "Até 3 projetos",
-        "Todos os calculadores",
-        "Consulta ITs CBMBA",
-        "Dashboard básico",
-        "Sem exportação PDF",
-        "Sem suporte prioritário",
-      ],
-      cta:planoAtual==="free"?"Plano atual":"Fazer downgrade",
-      link:null,
-    },
-    {
-      id:"pro",
-      nome:"Profissional",
-      preco:"R$ 99",
-      periodo:"/mês",
-      cor:"orange",
-      destaque:true,
-      itens:[
-        "Projetos ilimitados",
-        "Todos os calculadores",
-        "Exportação PDF completa",
-        "Memória de cálculo PDF",
-        "Análise de planta com IA",
-        "Suporte por e-mail",
-      ],
-      // Link de pagamento Pagar.me — substituir pela URL real após criar produto no painel
-      link:"https://pagar.me/",
-      cta:planoAtual==="pro"?"Plano atual":planoAtual==="escritorio"?"Fazer downgrade":"Assinar agora",
-    },
-    {
-      id:"escritorio",
-      nome:"Escritório",
-      preco:"R$ 279",
-      periodo:"/mês",
-      cor:"violet",
-      destaque:false,
-      itens:[
-        "Tudo do Pro",
-        "Até 5 usuários",
-        "Logo do escritório no PDF",
-        "Projetos compartilhados",
-        "Relatório com timbre",
-        "Suporte prioritário",
-      ],
-      // Link de pagamento Pagar.me — substituir pela URL real após criar produto no painel
-      link:"https://pagar.me/",
-      cta:planoAtual==="escritorio"?"Plano atual":"Assinar agora",
-    },
-  ];
-
-  const handleCheckout=async(plano)=>{
-    if(!plano.link||plano.id===planoAtual)return;
-    setLoading(plano.id);
-    // Monta URL de checkout com parâmetros de retorno para identificar o usuário
-    const returnUrl=`${window.location.href.split("?")[0]}?upgraded=${plano.id}`;
-    const checkoutUrl=`${plano.link}?customer_email=${encodeURIComponent(profile?.id||"")}&redirect_url=${encodeURIComponent(returnUrl)}`;
-    window.open(checkoutUrl,"_blank");
-    setLoading(null);
+const SinoNotificacoes=({vistoEm,onMarcarVisto})=>{
+  const [aberto,setAberto]=useState(false);
+  const maisRecente=AVISOS.length?AVISOS[0].data:null;
+  const temNovo=maisRecente&&(!vistoEm||new Date(maisRecente+"T23:59:59")>new Date(vistoEm));
+  const abrir=()=>{
+    const novoEstado=!aberto;
+    setAberto(novoEstado);
+    if(novoEstado&&temNovo)onMarcarVisto();
   };
-
-  const badgeCor={
-    free:"bg-slate-100 text-slate-600",
-    orange:"bg-orange-100 text-orange-700",
-    violet:"bg-violet-100 text-violet-700"
-  };
-
+  const fmtData=(d)=>{try{return new Date(d+"T12:00:00").toLocaleDateString("pt-BR",{day:"2-digit",month:"short"})}catch(e){return d}};
   return(
-    <div className="space-y-8 fade-in max-w-5xl">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-800">Planos & Upgrade</h1>
-        <p className="text-slate-500 text-sm mt-1">
-          Plano atual: <span className={`font-semibold px-2 py-0.5 rounded-full text-xs ${badgeCor[planoAtual==="free"?"free":planoAtual==="pro"?"orange":"violet"]}`}>
-            {planoAtual==="free"?"Gratuito":planoAtual==="pro"?"Profissional":"Escritório"}
-          </span>
-        </p>
-      </div>
-
-      {msg&&<div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-sm text-emerald-800 font-medium flex items-center gap-2"><Icons.check size={16} className="text-emerald-600 flex-shrink-0"/>{msg}</div>}
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        {PLANOS.map(pl=>(
-          <div key={pl.id} className={`relative rounded-2xl border-2 p-6 flex flex-col transition-all ${pl.destaque?"border-orange-400 shadow-lg shadow-orange-100":"border-slate-200"} ${planoAtual===pl.id?"ring-2 ring-offset-2 ring-orange-300":""}`}>
-            {pl.destaque&&<div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-orange-500 to-red-500 text-white text-[10px] font-bold px-4 py-1 rounded-full uppercase tracking-wider shadow-sm">Mais popular</div>}
-            <div className="mb-5">
-              <h3 className="font-bold text-slate-800 text-lg">{pl.nome}</h3>
-              <div className="flex items-baseline gap-1 mt-2">
-                <span className="text-3xl font-bold text-slate-900">{pl.preco}</span>
-                <span className="text-slate-500 text-sm">{pl.periodo}</span>
-              </div>
-            </div>
-            <ul className="space-y-2.5 flex-1 mb-6">
-              {pl.itens.map((it,i)=>(
-                <li key={i} className="flex items-start gap-2 text-sm">
-                  <Icons.check size={14} className={`mt-0.5 flex-shrink-0 ${it.startsWith("Sem ")||it.startsWith("Sem")||it.startsWith("Até 3")?"text-slate-300":"text-emerald-500"}`}/>
-                  <span className={it.startsWith("Sem ")?"text-slate-400 line-through":"text-slate-700"}>{it}</span>
-                </li>
-              ))}
-            </ul>
-            <button
-              onClick={()=>pl.link&&pl.id!==planoAtual?handleCheckout(pl):undefined}
-              disabled={pl.id===planoAtual||loading===pl.id||!pl.link}
-              className={`w-full py-2.5 rounded-xl text-sm font-semibold transition-all focus:outline-none ${
-                pl.id===planoAtual
-                  ?"bg-slate-100 text-slate-400 cursor-default"
-                  :pl.destaque
-                  ?"bg-gradient-to-r from-orange-500 to-red-500 text-white hover:from-orange-600 hover:to-red-600 shadow-sm"
-                  :"bg-slate-800 text-white hover:bg-slate-900"
-              }`}
-            >
-              {loading===pl.id?<span className="pulse-dot">Abrindo checkout...</span>:pl.cta}
-            </button>
-            {pl.id!=="free"&&pl.id!==planoAtual&&<p className="text-[10px] text-slate-400 text-center mt-2">Cobrado mensalmente · Cancele quando quiser</p>}
+    <div className="relative">
+      <button onClick={abrir} title="Novidades" className="relative p-2 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-700 transition-colors">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+        {temNovo&&<span className="absolute top-1 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full ring-2 ring-white"/>}
+      </button>
+      {aberto&&(<>
+        <div className="fixed inset-0 z-40" onClick={()=>setAberto(false)}/>
+        <div className="absolute right-0 mt-2 w-80 max-w-[calc(100vw-2rem)] bg-white rounded-xl shadow-2xl border border-slate-200 z-50 overflow-hidden">
+          <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+            <p className="font-bold text-sm text-slate-800">Novidades</p>
+            <span className="text-[10px] text-slate-400">PPCI PRO em evolução 🚧</span>
           </div>
-        ))}
-      </div>
-
-      <Card className="p-5 border-amber-200 bg-amber-50/40">
-        <div className="flex gap-3 items-start">
-          <Icons.info size={18} className="text-amber-600 flex-shrink-0 mt-0.5"/>
-          <div>
-            <p className="text-sm font-semibold text-slate-700 mb-1">Como configurar o checkout Pagar.me</p>
-            <ol className="text-xs text-slate-600 space-y-1 list-decimal ml-4">
-              <li>Crie uma conta em <strong>pagar.me</strong> e acesse o painel.</li>
-              <li>Crie um <strong>Plano de Assinatura</strong> para cada plano (Pro e Escritório) com os valores acima.</li>
-              <li>Copie o link de checkout gerado e substitua a constante <code className="bg-slate-100 px-1 rounded">link</code> em cada plano no código desta página.</li>
-              <li>Os clientes serão redirecionados de volta ao app após o pagamento e o plano será atualizado automaticamente.</li>
-            </ol>
+          <div className="max-h-80 overflow-y-auto divide-y divide-slate-100">
+            {AVISOS.map((a,i)=>(
+              <div key={i} className="px-4 py-3 hover:bg-slate-50">
+                <div className="flex items-start gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-orange-500 mt-1.5 flex-shrink-0"/>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-slate-800">{a.titulo}</p>
+                    <p className="text-xs text-slate-600 mt-0.5 leading-relaxed">{a.texto}</p>
+                    <p className="text-[10px] text-slate-400 mt-1">{fmtData(a.data)}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {AVISOS.length===0&&<div className="px-4 py-6 text-center text-sm text-slate-400">Nenhuma novidade no momento.</div>}
           </div>
         </div>
-      </Card>
+      </>)}
     </div>
   );
 };
 
-// ---- APP ----
 // ============================================================
 function App(){
   const [session,setSession]=useState(undefined); // undefined = carregando, null = deslogado
@@ -5215,6 +5562,7 @@ function App(){
   const [collapsed,setCollapsed]=useState(false);
   const [projects,setProjects]=useState([]);
   const [selProj,setSelProj]=useState(null);
+  const [editProj,setEditProj]=useState(null);
   const [mobMenu,setMobMenu]=useState(false);
 
   // Escuta mudanças de sessão (login, logout, refresh de token)
@@ -5235,20 +5583,92 @@ function App(){
       .then(({data})=>{if(data)setProfile(data);});
     // Busca projetos do usuário
     supabase.from("projects").select("*").eq("user_id",session.user.id).order("updated_at",{ascending:false})
-      .then(({data})=>{if(data)setProjects(data.map(p=>({
-        ...p,
-        // Compatibilidade com campos usados no app
-        nome:p.nome,
-        status:p.status==="em_andamento"?"RASCUNHO":p.status==="concluido"?"CALCULADO":"ARQUIVADO",
-        grupo:p.divisao?p.divisao.split("-")[0]:"A",
-        area_construida:p.area,
-        altura_edificacao:p.altura*p.pavimentos,
-        numero_pavimentos:p.pavimentos,
-        possui_subsolo:p.subterraneo,
-        criado:p.created_at?.slice(0,10),
-        atualizado:p.updated_at?.slice(0,10),
-      })));});
+      .then(({data})=>{if(data)setProjects(data.map(dbToApp));});
   },[session]);
+
+  // ---- Persistência de projetos no Supabase ----
+  // Converte um registro do banco para o formato usado nas telas do app
+  const dbToApp=(p)=>({
+    ...p,
+    nome:p.nome,
+    status:p.status==="em_andamento"?"RASCUNHO":p.status==="concluido"?"CALCULADO":"ARQUIVADO",
+    grupo:p.divisao?p.divisao.split("-")[0]:(p.calculos&&p.calculos.grupo)||"A",
+    area_construida:p.area,
+    altura_edificacao:(p.calculos&&p.calculos.altura_edificacao)||(p.altura*p.pavimentos),
+    numero_pavimentos:p.pavimentos,
+    possui_subsolo:p.subterraneo,
+    criado:p.created_at?.slice(0,10),
+    atualizado:p.updated_at?.slice(0,10),
+    valor:p.valor!=null?Number(p.valor):0,
+    data_inicio:p.data_inicio||null,
+    data_aprovacao:p.data_aprovacao||null,
+    status_gestao:p.status_gestao||"rascunho",
+    ...((p.calculos&&typeof p.calculos==="object")?p.calculos:{}),
+  });
+  // Converte um projeto do app para o formato de gravação no banco
+  const appToDb=(p,userId)=>({
+    user_id:userId,
+    nome:p.nome||"Projeto sem nome",
+    endereco:p.endereco||null,
+    divisao:p.divisao||(p.grupo?p.grupo+"-1":"A-1"),
+    area:Number(p.area_construida)||0,
+    pavimentos:Number(p.numero_pavimentos)||1,
+    altura:Number(p.altura_unitaria)||3,
+    subterraneo:!!p.possui_subsolo,
+    populacao:p.populacao!=null?Number(p.populacao):null,
+    carga_incendio:p.carga_incendio!=null?Number(p.carga_incendio):null,
+    sistemas:Array.isArray(p.sistemas)?p.sistemas:[],
+    status:p.status==="CALCULADO"?"concluido":p.status==="ARQUIVADO"?"arquivado":"em_andamento",
+    valor:p.valor!=null?Number(p.valor):0,
+    data_inicio:p.data_inicio||null,
+    data_aprovacao:p.data_aprovacao||null,
+    status_gestao:p.status_gestao||"rascunho",
+    calculos:{
+      grupo:p.grupo,
+      altura_edificacao:p.altura_edificacao,
+      numero_subsolos:p.numero_subsolos,
+      responsavel_tecnico:p.responsavel_tecnico,
+      crea_responsavel:p.crea_responsavel,
+      areas_por_pavimento:p.areas_por_pavimento,
+      calculos:p.calculos,
+      sugestao:p.sugestao,
+    },
+  });
+  // Cria ou atualiza um projeto; devolve o projeto já com o id do banco
+  const salvarProjeto=async(p)=>{
+    if(!session){return p;}
+    const userId=session.user.id;
+    const payload=appToDb(p,userId);
+    const ehUUID=typeof p.id==="string"&&p.id.length>20;
+    try{
+      let resp;
+      if(ehUUID){
+        resp=await supabase.from("projects").update(payload).eq("id",p.id).select().single();
+      }else{
+        resp=await supabase.from("projects").insert(payload).select().single();
+      }
+      if(resp.error){alert("Não foi possível salvar o projeto: "+resp.error.message);return p;}
+      const salvo=dbToApp(resp.data);
+      setProjects(prev=>{const semEle=prev.filter(x=>String(x.id)!==String(p.id)&&String(x.id)!==String(salvo.id));return [salvo,...semEle];});
+      return salvo;
+    }catch(err){alert("Erro ao salvar o projeto: "+err.message);return p;}
+  };
+  // Exclui um projeto do banco e da tela
+  const excluirProjeto=async(id)=>{
+    const ehUUID=typeof id==="string"&&id.length>20;
+    if(ehUUID){
+      const{error}=await supabase.from("projects").delete().eq("id",id);
+      if(error){alert("Não foi possível excluir: "+error.message);return;}
+    }
+    setProjects(prev=>prev.filter(x=>String(x.id)!==String(id)));
+  };
+
+  // Marca os avisos como vistos (some o pontinho vermelho) e salva no perfil
+  const marcarAvisosVistos=async()=>{
+    const agora=new Date().toISOString();
+    setProfile(p=>p?{...p,avisos_vistos_em:agora}:p);
+    if(session){try{await supabase.from("profiles").update({avisos_vistos_em:agora}).eq("id",session.user.id);}catch(e){}}
+  };
 
   const handleLogout=async()=>{
     await supabase.auth.signOut();
@@ -5261,7 +5681,7 @@ function App(){
       <div className="min-h-screen bg-slate-900 flex items-center justify-center">
         <div className="text-center">
           <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-orange-500/30"><Icons.flame size={24} className="text-white"/></div>
-          <p className="text-slate-400 text-sm">Carregando PPCI SaaS...</p>
+          <p className="text-slate-400 text-sm">Carregando PPCI PRO...</p>
         </div>
       </div>
     );
@@ -5272,11 +5692,38 @@ function App(){
   const planoBadge={free:"bg-slate-100 text-slate-600",pro:"bg-orange-100 text-orange-700",escritorio:"bg-violet-100 text-violet-700"};
   const planoLabel={free:"Grátis",pro:"Pro",escritorio:"Escritório"};
   const plano=profile?.plan||"free";
+  // Páginas de DIMENSIONAMENTO e FINALIZAÇÃO — bloqueadas no plano gratuito
+  const PAGINAS_PAGAS=["calc-populacao","calc-carga","calc-caminhamento","calc-brigada","calc-iluminacao","calc-sinalizacao","calc-alarme","calc-sprinklers","calc-spda","calc-glp","calc-fumaca","hidrantes-iso","revisao","exportar"];
+  const paginaBloqueada=plano==="free"&&PAGINAS_PAGAS.includes(page);
+  const PaywallLock=()=>(
+    <div className="max-w-2xl mx-auto fade-in">
+      <Card className="p-8 sm:p-12 text-center">
+        <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center shadow-lg shadow-orange-500/30 mb-6"><Icons.shield size={30} className="text-white"/></div>
+        <h1 className="text-2xl font-bold text-slate-800">Recurso do plano Profissional</h1>
+        <p className="text-slate-500 mt-3 leading-relaxed">O <b>dimensionamento dos sistemas</b> e a <b>finalização do projeto</b> (cálculos, revisão e exportação do memorial) estão disponíveis no plano <b>Profissional</b>.</p>
+        <p className="text-slate-500 mt-2 leading-relaxed">No plano Gratuito você pode criar projetos e ver a classificação automática da edificação. Assine para liberar todos os cálculos e gerar o memorial em PDF.</p>
+        <div className="mt-7 p-5 bg-orange-50/60 rounded-xl border border-orange-200 text-left max-w-md mx-auto">
+          <p className="text-xs font-semibold text-orange-600 uppercase tracking-wider mb-3">Liberando o plano Profissional</p>
+          <ul className="space-y-2 text-sm text-slate-600">
+            <li className="flex items-center gap-2"><Icons.check size={15} className="text-emerald-500 flex-shrink-0"/> Todos os módulos de dimensionamento</li>
+            <li className="flex items-center gap-2"><Icons.check size={15} className="text-emerald-500 flex-shrink-0"/> Cálculos gerais, revisão e exportação</li>
+            <li className="flex items-center gap-2"><Icons.check size={15} className="text-emerald-500 flex-shrink-0"/> Memorial em PDF com seu CREA</li>
+            <li className="flex items-center gap-2"><Icons.check size={15} className="text-emerald-500 flex-shrink-0"/> Projetos ilimitados e análise por IA</li>
+          </ul>
+        </div>
+        <p className="text-xs text-slate-400 mt-5">Importante: assine usando o <b>mesmo e-mail</b> com que você entra no app, para o plano ser liberado automaticamente.</p>
+        <div className="flex justify-center gap-3 mt-7">
+          <Btn variant="secondary" onClick={()=>setPage("dashboard")}><Icons.arrowLeft size={14}/> Voltar</Btn>
+          <a href="https://pay.kiwify.com.br/BHLRqDV" target="_blank" rel="noopener" className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-gradient-to-r from-orange-500 to-red-500 text-white font-semibold shadow-lg shadow-orange-500/20 hover:opacity-90 transition-opacity no-underline"><Icons.shield size={14}/> Assinar plano Profissional</a>
+        </div>
+      </Card>
+    </div>
+  );
 
   const pages={
-    "dashboard":<DashboardPage projects={projects} setPage={setPage} setSelProj={setSelProj} setProjects={setProjects}/>,
-    "novo-projeto":<NovoProjetoPage setPage={setPage} setProjects={setProjects} projects={projects} setSelProj={setSelProj}/>,
-    "analise-planta":<AnalisePlantaPage setPage={setPage} setProjects={setProjects} setSelProj={setSelProj}/>,
+    "dashboard":<DashboardPage projects={projects} setPage={setPage} setSelProj={setSelProj} setProjects={setProjects} excluirProjeto={excluirProjeto} editarProjeto={setEditProj}/>,
+    "novo-projeto":<NovoProjetoPage setPage={setPage} setProjects={setProjects} projects={projects} setSelProj={setSelProj} salvarProjeto={salvarProjeto} profile={profile}/>,
+    "analise-planta":<AnalisePlantaPage setPage={setPage} setProjects={setProjects} setSelProj={setSelProj} salvarProjeto={salvarProjeto} session={session} profile={profile}/>,
     "calc-populacao":<CalcPopulacaoPage project={selProj}/>,
     "calc-carga":<CalcCargaIncendioPage project={selProj}/>,
     "consulta-it14":<ConsultaIT14Page/>,
@@ -5291,10 +5738,9 @@ function App(){
     "calc-fumaca":<CalcPressurizacaoPage project={selProj}/>,
     "hidrantes-iso":<HidrantesIsoPage/>,
     "pts-it42":<ProjetoSimplificadoPage project={selProj}/>,
-    "calculos":<CalculosPage project={selProj}/>,
+    "calculos":<CalculosPage project={selProj} plano={plano}/>,
     "revisao":<RevisaoPage project={selProj}/>,
     "exportar":<ExportarPage project={selProj}/>,
-    "planos":<PlanosPage profile={profile} onPlanChange={(newPlan)=>setProfile(p=>({...p,plan:newPlan}))}/>,
   };
 
   return(
@@ -5304,9 +5750,10 @@ function App(){
         <button onClick={()=>setMobMenu(!mobMenu)} className="p-2 rounded-lg hover:bg-slate-100"><Icons.menu size={20}/></button>
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center"><Icons.flame size={14} className="text-white"/></div>
-          <span className="font-bold text-sm text-slate-800">PPCI SaaS</span>
+          <span className="font-bold text-sm text-slate-800">PPCI PRO</span>
         </div>
         <div className="ml-auto flex items-center gap-2">
+          <SinoNotificacoes vistoEm={profile?.avisos_vistos_em} onMarcarVisto={marcarAvisosVistos}/>
           <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${planoBadge[plano]}`}>{planoLabel[plano]}</span>
           <button onClick={handleLogout} className="text-xs text-slate-500 hover:text-red-500 px-2 py-1 rounded hover:bg-red-50 transition-colors">Sair</button>
         </div>
@@ -5317,11 +5764,15 @@ function App(){
 
       {/* Sidebar desktop */}
       <div className="hidden lg:block">
-        <Sidebar page={page} setPage={p=>{setPage(p);setMobMenu(false)}} collapsed={collapsed} setCollapsed={setCollapsed} selProj={selProj}/>
+        <Sidebar page={page} setPage={p=>{setPage(p);setMobMenu(false)}} collapsed={collapsed} setCollapsed={setCollapsed} selProj={selProj} profile={profile}/>
         {/* Botão de logout + info de usuário no rodapé do sidebar (desktop) */}
         {!collapsed&&(
           <div className="fixed bottom-0 left-0 w-64 bg-slate-900 border-t border-slate-700/50 px-4 py-3 z-40">
-            <div className="flex items-center gap-2 mb-2">
+            {plano==="pro"||plano==="escritorio"
+              ? <div className="flex items-center gap-2 px-3 py-2 mb-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20" title={`Plano ${planoLabel[plano]} ativo`}><Icons.shield size={15} className="text-emerald-400 flex-shrink-0"/><div className="leading-tight"><p className="text-[11px] font-semibold text-emerald-400">Plano {planoLabel[plano]}</p><p className="text-[9px] text-slate-500">ativo</p></div></div>
+              : <a href="https://pay.kiwify.com.br/BHLRqDV" target="_blank" rel="noopener" className="flex items-center justify-center gap-2 px-3 py-2 mb-2 rounded-lg bg-gradient-to-r from-orange-500 to-red-500 text-white font-semibold shadow-lg shadow-orange-500/20 hover:opacity-90 transition-opacity no-underline"><Icons.shield size={15} className="flex-shrink-0"/><span className="text-[12px]">Assinar plano Profissional</span></a>
+            }
+            <div className="flex items-center gap-2">
               <div className="w-7 h-7 rounded-full bg-orange-500/20 flex items-center justify-center flex-shrink-0">
                 <span className="text-orange-400 text-[10px] font-bold">{(profile?.full_name||session.user.email||"U")[0].toUpperCase()}</span>
               </div>
@@ -5338,11 +5789,16 @@ function App(){
       </div>
 
       {/* Sidebar mobile */}
-      {mobMenu&&<div className="lg:hidden fixed left-0 top-0 h-full z-50"><Sidebar page={page} setPage={p=>{setPage(p);setMobMenu(false)}} collapsed={false} setCollapsed={()=>{}} selProj={selProj}/></div>}
+      {mobMenu&&<div className="lg:hidden fixed left-0 top-0 h-full z-50"><Sidebar page={page} setPage={p=>{setPage(p);setMobMenu(false)}} collapsed={false} setCollapsed={()=>{}} selProj={selProj} profile={profile}/></div>}
 
       {/* Conteúdo principal */}
       <main className={`transition-all duration-300 pt-14 lg:pt-0 ${collapsed?"lg:ml-[68px]":"lg:ml-64"}`}>
-        <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">{pages[page]}</div>
+        {/* Barra superior (desktop) com sino de novidades */}
+        <div className="hidden lg:flex items-center justify-end gap-2 h-14 px-8 border-b border-slate-200 bg-white/70 backdrop-blur sticky top-0 z-30">
+          <SinoNotificacoes vistoEm={profile?.avisos_vistos_em} onMarcarVisto={marcarAvisosVistos}/>
+        </div>
+        <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">{paginaBloqueada?<PaywallLock/>:pages[page]}</div>
+        {editProj&&<EditarProjetoModal projeto={editProj} onClose={()=>setEditProj(null)} onSalvar={salvarProjeto}/>}
       </main>
     </div>
   );
