@@ -1,7 +1,0 @@
-fastapi>=0.110.0
-uvicorn[standard]>=0.27.0
-pydantic>=2.5.0
-python-multipart>=0.0.9
-anthropic>=0.40.0
-openpyxl>=3.1.0
-reportlab>=4.0.0
