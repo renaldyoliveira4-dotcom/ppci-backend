@@ -11,18 +11,6 @@ const nextConfig: NextConfig = {
       },
     ]
   },
-  async rewrites() {
-    return [
-      {
-        source: '/api/ai/status',
-        destination: '/api/ai-status',
-      },
-      {
-        source: '/api/ai/analyze-plant',
-        destination: '/api/analyze-plant',
-      },
-    ]
-  },
 }
 
 export default nextConfig
