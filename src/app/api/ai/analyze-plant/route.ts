@@ -1,6 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '20mb',
+    },
+  },
+}
+
+export const maxDuration = 60
+
 const SYSTEM_PROMPT = `Você é um ANALISTA/VISTORIADOR de projetos PPCI do Corpo de Bombeiros Militar da Bahia (CBMBA), com profundo conhecimento das Instruções Técnicas (ITs).
 
 Sua tarefa é AUDITAR a planta de combate a incêndio e dizer se o projeto está ENQUADRADO CORRETAMENTE e CONFORME as ITs.
@@ -102,7 +112,7 @@ export async function POST(request: NextRequest) {
     const client = new Anthropic({ apiKey })
     const response = await client.messages.create({
       model: 'claude-sonnet-4-6',
-      max_tokens: 4000,
+      max_tokens: 8000,
       system: SYSTEM_PROMPT,
       messages: [{ role: 'user', content }],
     })
@@ -118,7 +128,25 @@ export async function POST(request: NextRequest) {
       texto = texto.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim()
     }
 
-    const resultado = JSON.parse(texto)
+    // Extrai JSON mesmo que o texto esteja truncado
+    const start = texto.indexOf('{')
+    if (start === -1) throw new Error('IA não retornou JSON válido')
+    
+    let jsonStr = texto.slice(start)
+    let resultado: Record<string, unknown>
+    
+    try {
+      resultado = JSON.parse(jsonStr)
+    } catch {
+      // Tenta fechar o JSON truncado
+      const depth = (jsonStr.match(/{/g)||[]).length - (jsonStr.match(/}/g)||[]).length
+      jsonStr += '}'.repeat(Math.max(depth, 1))
+      try {
+        resultado = JSON.parse(jsonStr)
+      } catch {
+        throw new Error(`JSON inválido retornado pela IA: ${jsonStr.slice(0, 200)}`)
+      }
+    }
     resultado._meta = {
       model: 'claude-sonnet-4-6',
       arquivos: nomes,
