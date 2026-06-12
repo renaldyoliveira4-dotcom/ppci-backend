@@ -1361,7 +1361,7 @@ const AnalisePlantaPage=({setPage,setProjects,setSelProj,salvarProjeto,session,p
   const [stageText,setStageText]=useState("");
   const [editing,setEditing]=useState({});
   // URL do backend embutida — não precisa configurar na interface
-  const BACKEND_URL_EMBUTIDA="https://ppci-saas01-production.up.railway.app";
+  const BACKEND_URL_EMBUTIDA=window.location.origin;
   const [backendUrl,setBackendUrl]=useState(()=>{try{return localStorage.getItem("ppci_backend_url")||BACKEND_URL_EMBUTIDA}catch(e){return BACKEND_URL_EMBUTIDA}});
   const [showSettings,setShowSettings]=useState(false);
   const [backendStatus,setBackendStatus]=useState(null);
